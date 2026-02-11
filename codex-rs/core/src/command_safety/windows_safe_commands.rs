@@ -127,28 +127,43 @@ fn is_powershell_executable(exe: &str) -> bool {
 fn parse_with_powershell_ast(executable: &str, script: &str) -> PowershellParseOutcome {
     let encoded_script = encode_powershell_base64(script);
     let encoded_parser_script = encoded_parser_script();
-    match Command::new(executable)
-        .args([
-            "-NoLogo",
-            "-NoProfile",
-            "-NonInteractive",
-            "-EncodedCommand",
-            encoded_parser_script,
-        ])
-        .env("CODEX_POWERSHELL_PAYLOAD", &encoded_script)
-        .output()
-    {
-        Ok(output) if output.status.success() => {
-            if let Ok(result) =
-                serde_json::from_slice::<PowershellParserOutput>(output.stdout.as_slice())
-            {
-                result.into_outcome()
-            } else {
-                PowershellParseOutcome::Failed
-            }
+    // PowerShell safety checks should work even if the original binary path doesn't exist.
+    // We parse with the provided executable first, then fall back to common PowerShell names.
+    // This keeps the allowlist logic stable across Windows installations.
+    for candidate in [
+        executable,
+        "pwsh",
+        "pwsh.exe",
+        "powershell",
+        "powershell.exe",
+    ] {
+        let output = Command::new(candidate)
+            .args([
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-EncodedCommand",
+                encoded_parser_script,
+            ])
+            .env("CODEX_POWERSHELL_PAYLOAD", &encoded_script)
+            .output();
+
+        let Ok(output) = output else {
+            continue;
+        };
+        if !output.status.success() {
+            continue;
         }
-        _ => PowershellParseOutcome::Failed,
+
+        let Ok(result) = serde_json::from_slice::<PowershellParserOutput>(output.stdout.as_slice())
+        else {
+            continue;
+        };
+
+        return result.into_outcome();
     }
+
+    PowershellParseOutcome::Failed
 }
 
 fn encode_powershell_base64(script: &str) -> String {

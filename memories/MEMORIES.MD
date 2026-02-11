@@ -1,0 +1,16 @@
+﻿# Memories
+
+- Native GUI planning file: `GUI_PLAN.md`.
+- User asked to conserve Claude quota; avoid heavy `claude -p` loops unless explicitly requested.
+- Best-fit stack chosen for this repo: Tauri v2 + React/TS + Rust orchestration over app-server v2 contracts.
+- External reference signal used:
+  - `anomalyco/opencode` uses Tauri desktop + sidecar CLI + client/server orientation.
+  - IntelliJ platform suggests plugin-first architecture, strong action system, and Windows discipline.
+- Keep TUI as regression oracle; do not fork core business logic into GUI-specific implementations.
+- New cross-device requirement captured in plan:
+  - Windows GUI + Android app are companions to CLI/TUI (peer clients over shared contract).
+  - Android stack for v1: Kotlin + Jetpack Compose.
+  - Companion transport: local-network gateway with secure pairing, role-based access, reconnect cursors.
+- Security defaults in plan:
+  - LAN companion mode off by default.
+  - Explicit device pairing required before any mobile access.

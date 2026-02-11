@@ -31,6 +31,9 @@ use tracing::error;
 pub const SUMMARIZATION_PROMPT: &str = include_str!("../templates/compact/prompt.md");
 pub const SUMMARY_PREFIX: &str = include_str!("../templates/compact/summary_prefix.md");
 const COMPACT_USER_MESSAGE_MAX_TOKENS: usize = 20_000;
+// Always keep the very first real user message (the original prompt) after compaction,
+// but cap its contribution so we still preserve some recent turns.
+const COMPACT_PINNED_USER_MESSAGE_MAX_TOKENS: usize = 2_000;
 
 pub(crate) fn should_use_remote_compact_task(provider: &ModelProviderInfo) -> bool {
     provider.is_openai()
@@ -205,6 +208,26 @@ async fn run_compact_task_inner(
     });
     sess.persist_rollout_items(&[rollout_item]).await;
 
+    match crate::project_memory::maybe_update_project_memory_from_compaction_summary(
+        turn_context.config.codex_home.as_path(),
+        turn_context.cwd.as_path(),
+        &summary_text,
+    )
+    .await
+    {
+        Ok(Some(path)) => {
+            sess.notify_background_event(
+                turn_context.as_ref(),
+                format!("Updated project memory: {}", path.display()),
+            )
+            .await;
+        }
+        Ok(None) => {}
+        Err(err) => {
+            tracing::warn!("failed to update project memory after compaction: {err}");
+        }
+    }
+
     sess.emit_turn_item_completed(&turn_context, compaction_item)
         .await;
     let warning = EventMsg::Warning(WarningEvent {
@@ -322,23 +345,45 @@ fn build_compacted_history_with_limit(
     max_tokens: usize,
 ) -> Vec<ResponseItem> {
     let mut selected_messages: Vec<String> = Vec::new();
-    if max_tokens > 0 {
+    if max_tokens > 0 && !user_messages.is_empty() {
         let mut remaining = max_tokens;
-        for message in user_messages.iter().rev() {
+
+        // Pin the first user message (original prompt) at the start.
+        let pinned_limit = remaining.min(COMPACT_PINNED_USER_MESSAGE_MAX_TOKENS);
+        if pinned_limit > 0 {
+            let pinned = &user_messages[0];
+            let pinned_tokens = approx_token_count(pinned);
+            let pinned_text = if pinned_tokens <= pinned_limit {
+                pinned.clone()
+            } else {
+                truncate_text(pinned, TruncationPolicy::Tokens(pinned_limit))
+            };
+            if !pinned_text.trim().is_empty() {
+                remaining = remaining.saturating_sub(approx_token_count(&pinned_text));
+                selected_messages.push(pinned_text);
+            }
+        }
+
+        // Fill the remaining budget with recent user messages (excluding the pinned one).
+        let mut tail_messages: Vec<String> = Vec::new();
+        for (idx, message) in user_messages.iter().enumerate().rev() {
+            if idx == 0 {
+                continue;
+            }
             if remaining == 0 {
                 break;
             }
             let tokens = approx_token_count(message);
             if tokens <= remaining {
-                selected_messages.push(message.clone());
+                tail_messages.push(message.clone());
                 remaining = remaining.saturating_sub(tokens);
             } else {
-                let truncated = truncate_text(message, TruncationPolicy::Tokens(remaining));
-                selected_messages.push(truncated);
+                tail_messages.push(truncate_text(message, TruncationPolicy::Tokens(remaining)));
                 break;
             }
         }
-        selected_messages.reverse();
+        tail_messages.reverse();
+        selected_messages.extend(tail_messages);
     }
 
     for message in &selected_messages {

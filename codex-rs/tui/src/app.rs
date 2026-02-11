@@ -789,35 +789,332 @@ impl App {
         thread_ids.sort_by_key(ToString::to_string);
 
         let mut initial_selected_idx = None;
-        let items: Vec<SelectionItem> = thread_ids
-            .iter()
-            .enumerate()
-            .map(|(idx, thread_id)| {
-                if self.active_thread_id == Some(*thread_id) {
-                    initial_selected_idx = Some(idx);
-                }
-                let id = *thread_id;
-                SelectionItem {
-                    name: thread_id.to_string(),
-                    is_current: self.active_thread_id == Some(*thread_id),
-                    actions: vec![Box::new(move |tx| {
-                        tx.send(AppEvent::SelectAgentThread(id));
-                    })],
-                    dismiss_on_select: true,
-                    search_value: Some(thread_id.to_string()),
-                    ..Default::default()
-                }
-            })
-            .collect();
+        let mut items: Vec<SelectionItem> = Vec::new();
+        items.push(SelectionItem {
+            name: "Spawn new agent".to_string(),
+            description: Some("Create a new agent thread".to_string()),
+            actions: vec![Box::new(|tx| tx.send(AppEvent::SpawnAgentThread))],
+            dismiss_on_select: true,
+            ..Default::default()
+        });
+
+        let current_thread_id = self.chat_widget.thread_id();
+        for (idx, thread_id) in thread_ids.iter().enumerate() {
+            if self.active_thread_id == Some(*thread_id) {
+                // +1 to account for the "Spawn new agent" row.
+                initial_selected_idx = Some(idx + 1);
+            }
+
+            let status = match self.server.get_thread(*thread_id).await {
+                Ok(thread) => thread.agent_status().await,
+                Err(_) => codex_core::protocol::AgentStatus::NotFound,
+            };
+            let status_label = match &status {
+                codex_core::protocol::AgentStatus::PendingInit => "pending init",
+                codex_core::protocol::AgentStatus::Running => "running",
+                codex_core::protocol::AgentStatus::Completed(_) => "completed",
+                codex_core::protocol::AgentStatus::Errored(_) => "errored",
+                codex_core::protocol::AgentStatus::Shutdown => "shutdown",
+                codex_core::protocol::AgentStatus::NotFound => "not found",
+            };
+
+            let id = *thread_id;
+            items.push(SelectionItem {
+                name: format!("Focus {id}"),
+                description: Some(format!("status: {status_label}")),
+                is_current: self.active_thread_id == Some(*thread_id),
+                actions: vec![Box::new(move |tx| tx.send(AppEvent::SelectAgentThread(id)))],
+                dismiss_on_select: true,
+                search_value: Some(thread_id.to_string()),
+                ..Default::default()
+            });
+
+            let id = *thread_id;
+            items.push(SelectionItem {
+                name: format!("Interrupt {id}"),
+                description: Some("Abort the current task for this agent".to_string()),
+                actions: vec![Box::new(move |tx| {
+                    tx.send(AppEvent::InterruptAgentThread(id))
+                })],
+                dismiss_on_select: true,
+                search_value: Some(thread_id.to_string()),
+                ..Default::default()
+            });
+
+            let id = *thread_id;
+            let is_primary = self.primary_thread_id == Some(*thread_id);
+            let is_current_view = current_thread_id == Some(*thread_id);
+            items.push(SelectionItem {
+                name: format!("Close {id}"),
+                description: Some("Shut down this agent thread".to_string()),
+                is_disabled: is_primary || is_current_view,
+                disabled_reason: if is_primary {
+                    Some("Cannot close the primary thread.".to_string())
+                } else if is_current_view {
+                    Some("Cannot close the currently focused thread.".to_string())
+                } else {
+                    None
+                },
+                actions: vec![Box::new(move |tx| tx.send(AppEvent::CloseAgentThread(id)))],
+                dismiss_on_select: true,
+                search_value: Some(thread_id.to_string()),
+                ..Default::default()
+            });
+        }
 
         self.chat_widget.show_selection_view(SelectionViewParams {
             title: Some("Agents".to_string()),
-            subtitle: Some("Select a thread to focus".to_string()),
+            subtitle: Some("Spawn, focus, or control agent threads".to_string()),
             footer_hint: Some(standard_popup_hint_line()),
             items,
             initial_selected_idx,
             ..Default::default()
         });
+    }
+
+    async fn open_project_memory_menu(&mut self) {
+        let cwd = self.config.cwd.clone();
+        let codex_home = self.config.codex_home.clone();
+        let path =
+            codex_core::project_memory::project_memory_path(codex_home.as_path(), cwd.as_path());
+        let has_memory =
+            codex_core::project_memory::read_project_memory(codex_home.as_path(), cwd.as_path())
+                .await
+                .is_some();
+
+        let items = vec![
+            SelectionItem {
+                name: "Show project memory".to_string(),
+                description: Some("View the saved memory for this directory".to_string()),
+                is_disabled: !has_memory,
+                disabled_reason: (!has_memory)
+                    .then_some("No project memory yet. Use 'Edit' to create one.".to_string()),
+                actions: vec![Box::new(|tx| tx.send(AppEvent::ShowProjectMemory))],
+                dismiss_on_select: true,
+                ..Default::default()
+            },
+            SelectionItem {
+                name: "Edit project memory".to_string(),
+                description: Some(format!("Open external editor (file: {})", path.display())),
+                actions: vec![Box::new(|tx| tx.send(AppEvent::EditProjectMemory))],
+                dismiss_on_select: true,
+                ..Default::default()
+            },
+            SelectionItem {
+                name: "Show memory path".to_string(),
+                description: Some(
+                    "Print the resolved path for this directory's memory file".to_string(),
+                ),
+                actions: vec![Box::new(|tx| tx.send(AppEvent::ShowProjectMemoryPath))],
+                dismiss_on_select: true,
+                ..Default::default()
+            },
+        ];
+
+        self.chat_widget.show_selection_view(SelectionViewParams {
+            title: Some("Project Memory".to_string()),
+            subtitle: Some(cwd.display().to_string()),
+            footer_hint: Some(standard_popup_hint_line()),
+            items,
+            ..Default::default()
+        });
+    }
+
+    async fn show_project_memory(&mut self, tui: &mut tui::Tui) -> Result<()> {
+        let cwd = self.config.cwd.clone();
+        let codex_home = self.config.codex_home.clone();
+        let Some(text) =
+            codex_core::project_memory::read_project_memory(codex_home.as_path(), cwd.as_path())
+                .await
+        else {
+            self.chat_widget.add_info_message(
+                "No project memory yet. Use /memory and choose 'Edit project memory' to create one.".to_string(),
+                None,
+            );
+            return Ok(());
+        };
+
+        let _ = tui.enter_alt_screen();
+        let mut pager_lines: Vec<Line<'static>> = Vec::new();
+        pager_lines.push(
+            vec![
+                "Path: ".dim(),
+                codex_core::project_memory::project_memory_path(
+                    codex_home.as_path(),
+                    cwd.as_path(),
+                )
+                .display()
+                .to_string()
+                .dim(),
+            ]
+            .into(),
+        );
+        pager_lines.push("".into());
+        crate::markdown::append_markdown(&text, None, &mut pager_lines);
+        self.overlay = Some(Overlay::new_static_with_lines(
+            pager_lines,
+            "M E M O R Y".to_string(),
+        ));
+        tui.frame_requester().schedule_frame();
+        Ok(())
+    }
+
+    async fn edit_project_memory(&mut self, tui: &mut tui::Tui) -> Result<()> {
+        let editor_cmd = match external_editor::resolve_editor_command() {
+            Ok(cmd) => cmd,
+            Err(external_editor::EditorError::MissingEditor) => {
+                self.chat_widget.add_error_message(
+                    "Cannot open external editor: set $VISUAL or $EDITOR before starting Codex."
+                        .to_string(),
+                );
+                return Ok(());
+            }
+            Err(err) => {
+                self.chat_widget
+                    .add_error_message(format!("Failed to resolve editor: {err}"));
+                return Ok(());
+            }
+        };
+
+        let cwd = self.config.cwd.clone();
+        let codex_home = self.config.codex_home.clone();
+        let existing =
+            codex_core::project_memory::read_project_memory(codex_home.as_path(), cwd.as_path())
+                .await
+                .unwrap_or_default();
+        let seed = if existing.is_empty() {
+            format!(
+                "# Project Memory\n\nDirectory: `{}`\n\nWrite down durable project facts and preferences.\n\n- Goals:\n- Constraints:\n- Preferences:\n",
+                cwd.display()
+            )
+        } else {
+            existing
+        };
+
+        let editor_result = tui
+            .with_restored(tui::RestoreMode::KeepRaw, || async {
+                external_editor::run_editor(&seed, &editor_cmd).await
+            })
+            .await;
+
+        match editor_result {
+            Ok(new_text) => {
+                let cleaned = new_text.trim_end().to_string();
+                let path = codex_core::project_memory::project_memory_path(
+                    codex_home.as_path(),
+                    cwd.as_path(),
+                );
+                if cleaned.trim().is_empty() {
+                    if tokio::fs::remove_file(&path).await.is_ok() {
+                        self.chat_widget
+                            .add_info_message("Project memory cleared.".to_string(), None);
+                    } else {
+                        self.chat_widget.add_error_message(format!(
+                            "Failed to clear project memory at {}.",
+                            path.display()
+                        ));
+                    }
+                } else {
+                    match codex_core::project_memory::write_project_memory(
+                        codex_home.as_path(),
+                        cwd.as_path(),
+                        &cleaned,
+                    )
+                    .await
+                    {
+                        Ok(path) => {
+                            self.chat_widget.add_info_message(
+                                format!("Saved project memory to {}", path.display()),
+                                None,
+                            );
+                        }
+                        Err(err) => {
+                            self.chat_widget
+                                .add_error_message(format!("Failed to save project memory: {err}"));
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                self.chat_widget
+                    .add_error_message(format!("Failed to open editor: {err}"));
+            }
+        }
+
+        tui.frame_requester().schedule_frame();
+        Ok(())
+    }
+
+    async fn spawn_agent_thread(&mut self, tui: &mut tui::Tui) -> Result<()> {
+        let config = self.config.clone();
+        match self.server.start_thread(config).await {
+            Ok(new_thread) => {
+                let thread_id = new_thread.thread_id;
+                self.handle_thread_created(thread_id).await?;
+                self.chat_widget.add_info_message(
+                    format!("Spawned agent thread {thread_id}"),
+                    Some("Use /agent to switch between threads.".to_string()),
+                );
+                self.select_agent_thread(tui, thread_id).await?;
+            }
+            Err(err) => {
+                self.chat_widget
+                    .add_error_message(format!("Failed to spawn agent: {err}"));
+            }
+        }
+        Ok(())
+    }
+
+    async fn interrupt_agent_thread(&mut self, thread_id: ThreadId) {
+        let thread = match self.server.get_thread(thread_id).await {
+            Ok(thread) => thread,
+            Err(err) => {
+                self.chat_widget.add_error_message(format!(
+                    "Failed to interrupt agent thread {thread_id}: {err}"
+                ));
+                return;
+            }
+        };
+        if let Err(err) = thread.submit(Op::Interrupt).await {
+            self.chat_widget.add_error_message(format!(
+                "Failed to interrupt agent thread {thread_id}: {err}"
+            ));
+        } else {
+            self.chat_widget
+                .add_info_message(format!("Interrupted agent thread {thread_id}"), None);
+        }
+    }
+
+    async fn close_agent_thread(&mut self, _tui: &mut tui::Tui, thread_id: ThreadId) -> Result<()> {
+        if self.primary_thread_id == Some(thread_id) {
+            self.chat_widget
+                .add_error_message("Cannot close the primary thread.".to_string());
+            return Ok(());
+        }
+        if self.chat_widget.thread_id() == Some(thread_id) {
+            self.chat_widget
+                .add_error_message("Cannot close the currently focused thread.".to_string());
+            return Ok(());
+        }
+
+        let thread = match self.server.get_thread(thread_id).await {
+            Ok(thread) => thread,
+            Err(err) => {
+                self.chat_widget
+                    .add_error_message(format!("Failed to close agent thread {thread_id}: {err}"));
+                return Ok(());
+            }
+        };
+        if let Err(err) = thread.submit(Op::Shutdown).await {
+            self.chat_widget
+                .add_error_message(format!("Failed to close agent thread {thread_id}: {err}"));
+            return Ok(());
+        }
+        self.server.remove_thread(&thread_id).await;
+        self.thread_event_channels.remove(&thread_id);
+        self.chat_widget
+            .add_info_message(format!("Closed agent thread {thread_id}"), None);
+        Ok(())
     }
 
     async fn select_agent_thread(&mut self, tui: &mut tui::Tui, thread_id: ThreadId) -> Result<()> {
@@ -1586,6 +1883,269 @@ impl App {
                 ));
                 tui.frame_requester().schedule_frame();
             }
+            AppEvent::ExportConversationMarkdown {
+                rollout_path,
+                thread_id,
+            } => {
+                let config = self.config.clone();
+                let tx = self.app_event_tx.clone();
+                tokio::spawn(async move {
+                    let result = export_conversation_markdown(&config, &rollout_path, thread_id)
+                        .await
+                        .map_err(|err| err.to_string());
+                    match result {
+                        Ok(output_path) => tx.send(AppEvent::ExportConversationMarkdownResult {
+                            output_path: Some(output_path),
+                            error: None,
+                        }),
+                        Err(error) => tx.send(AppEvent::ExportConversationMarkdownResult {
+                            output_path: None,
+                            error: Some(error),
+                        }),
+                    };
+                });
+            }
+            AppEvent::ExportConversationMarkdownResult { output_path, error } => {
+                if let Some(error) = error {
+                    self.chat_widget
+                        .add_error_message(format!("Export failed: {error}"));
+                } else if let Some(output_path) = output_path {
+                    self.chat_widget.add_info_message(
+                        format!("Exported conversation to {}", output_path.display()),
+                        None,
+                    );
+                }
+            }
+            AppEvent::OpenStreamMarkdownPicker => {
+                let enabled = self.config.tui_stream_markdown_transcript;
+                let thread_id = self.chat_widget.thread_id();
+                let live_path = thread_id
+                    .map(|thread_id| live_conversation_markdown_path(&self.config, thread_id));
+
+                let mut items = Vec::new();
+                items.push(SelectionItem {
+                    name: "Stream Markdown transcript: On".to_string(),
+                    description: live_path
+                        .as_ref()
+                        .map(|path| format!("Write to {}", path.display())),
+                    is_current: enabled,
+                    actions: vec![Box::new(|tx| {
+                        tx.send(AppEvent::SetStreamMarkdownTranscript { enabled: true })
+                    })],
+                    dismiss_on_select: true,
+                    ..Default::default()
+                });
+                items.push(SelectionItem {
+                    name: "Stream Markdown transcript: Off".to_string(),
+                    description: Some("Disable live transcript export".to_string()),
+                    is_current: !enabled,
+                    actions: vec![Box::new(|tx| {
+                        tx.send(AppEvent::SetStreamMarkdownTranscript { enabled: false })
+                    })],
+                    dismiss_on_select: true,
+                    ..Default::default()
+                });
+
+                self.chat_widget.show_selection_view(SelectionViewParams {
+                    title: Some("Stream Transcript".to_string()),
+                    subtitle: Some("Keep a live Markdown copy of this thread on disk".to_string()),
+                    footer_hint: Some(standard_popup_hint_line()),
+                    items,
+                    ..Default::default()
+                });
+            }
+            AppEvent::SetStreamMarkdownTranscript { enabled } => {
+                let edit = codex_core::config::edit::tui_stream_markdown_transcript_edit(enabled);
+                match ConfigEditsBuilder::new(&self.config.codex_home)
+                    .with_edits([edit])
+                    .apply()
+                    .await
+                {
+                    Ok(()) => {
+                        self.config.tui_stream_markdown_transcript = enabled;
+                        self.chat_widget
+                            .set_stream_markdown_transcript_enabled(enabled);
+
+                        if enabled {
+                            if let Some(thread_id) = self.chat_widget.thread_id() {
+                                let path = live_conversation_markdown_path(&self.config, thread_id);
+                                self.chat_widget.add_info_message(
+                                    format!("Streaming Markdown transcript to {}", path.display()),
+                                    None,
+                                );
+                                if let Some(rollout_path) = self.chat_widget.rollout_path() {
+                                    self.app_event_tx.send(
+                                        AppEvent::UpdateLiveConversationMarkdown {
+                                            rollout_path,
+                                            thread_id,
+                                        },
+                                    );
+                                }
+                            } else {
+                                self.chat_widget.add_info_message(
+                                    "Streaming enabled. It will start after the thread initializes.".to_string(),
+                                    None,
+                                );
+                            }
+                        } else {
+                            self.chat_widget
+                                .add_info_message("Streaming disabled.".to_string(), None);
+                        }
+                    }
+                    Err(err) => {
+                        self.chat_widget.add_error_message(format!(
+                            "Failed to update stream-to-Markdown setting: {err}"
+                        ));
+                    }
+                }
+            }
+            AppEvent::UpdateLiveConversationMarkdown {
+                rollout_path,
+                thread_id,
+            } => {
+                let config = self.config.clone();
+                let tx = self.app_event_tx.clone();
+                tokio::spawn(async move {
+                    let result =
+                        update_live_conversation_markdown(&config, &rollout_path, thread_id)
+                            .await
+                            .map_err(|err| err.to_string());
+                    if let Err(error) = result {
+                        tx.send(AppEvent::UpdateLiveConversationMarkdownResult {
+                            error: Some(error),
+                        });
+                    } else {
+                        tx.send(AppEvent::UpdateLiveConversationMarkdownResult { error: None });
+                    }
+                });
+            }
+            AppEvent::UpdateLiveConversationMarkdownResult { error } => {
+                if let Some(error) = error {
+                    self.chat_widget.add_error_message(format!(
+                        "Failed to update live Markdown transcript: {error}"
+                    ));
+                }
+            }
+            AppEvent::OpenThemePicker => {
+                let current = self.config.tui_theme;
+                let items = vec![
+                    (
+                        codex_core::config::types::TuiTheme::Default,
+                        "Default",
+                        "Classic Codex TUI",
+                    ),
+                    (
+                        codex_core::config::types::TuiTheme::Fallout,
+                        "Fallout",
+                        "Green retro terminal vibe",
+                    ),
+                    (
+                        codex_core::config::types::TuiTheme::Cyberpunk,
+                        "Cyberpunk",
+                        "Neon magenta accents",
+                    ),
+                    (
+                        codex_core::config::types::TuiTheme::Matrix,
+                        "Matrix",
+                        "Green code rain energy",
+                    ),
+                ]
+                .into_iter()
+                .map(|(theme, name, description)| SelectionItem {
+                    name: name.to_string(),
+                    description: Some(description.to_string()),
+                    is_current: theme == current,
+                    actions: vec![Box::new(move |tx| tx.send(AppEvent::SetTheme(theme)))],
+                    dismiss_on_select: true,
+                    ..Default::default()
+                })
+                .collect();
+
+                self.chat_widget.show_selection_view(SelectionViewParams {
+                    title: Some("Theme".to_string()),
+                    subtitle: Some("Choose a visual preset".to_string()),
+                    footer_hint: Some(standard_popup_hint_line()),
+                    items,
+                    ..Default::default()
+                });
+            }
+            AppEvent::SetTheme(theme) => {
+                let edit = codex_core::config::edit::tui_theme_edit(theme);
+                match ConfigEditsBuilder::new(&self.config.codex_home)
+                    .with_edits([edit])
+                    .apply()
+                    .await
+                {
+                    Ok(()) => {
+                        self.config.tui_theme = theme;
+                        self.chat_widget.set_theme(theme);
+                        self.chat_widget
+                            .add_info_message(format!("Theme set to {theme}"), None);
+                    }
+                    Err(err) => {
+                        self.chat_widget
+                            .add_error_message(format!("Failed to save theme: {err}"));
+                    }
+                }
+            }
+            AppEvent::CaptureScreenshot => {
+                let config = self.config.clone();
+                let tx = self.app_event_tx.clone();
+                tokio::spawn(async move {
+                    let dir = config.codex_home.join("screenshots");
+                    let result = tokio::task::spawn_blocking(move || -> Result<PathBuf> {
+                        std::fs::create_dir_all(&dir).wrap_err_with(|| {
+                            format!("create screenshots dir {}", dir.display())
+                        })?;
+                        let ts = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+                        let path = dir.join(format!("screenshot-{ts}.png"));
+                        crate::screenshot::capture_primary_monitor_png(&path)
+                            .wrap_err_with(|| "capture screenshot")?;
+                        Ok(path)
+                    })
+                    .await
+                    .unwrap_or_else(|err| Err(err.into()))
+                    .map_err(|err| err.to_string());
+
+                    match result {
+                        Ok(path) => tx.send(AppEvent::CaptureScreenshotResult {
+                            path: Some(path),
+                            error: None,
+                        }),
+                        Err(error) => tx.send(AppEvent::CaptureScreenshotResult {
+                            path: None,
+                            error: Some(error),
+                        }),
+                    }
+                });
+            }
+            AppEvent::CaptureScreenshotResult { path, error } => {
+                if let Some(error) = error {
+                    self.chat_widget
+                        .add_error_message(format!("Screenshot failed: {error}"));
+                } else if let Some(path) = path {
+                    self.chat_widget.attach_image(path.clone());
+                    self.chat_widget
+                        .add_info_message(format!("Captured screenshot: {}", path.display()), None);
+                }
+            }
+            AppEvent::OpenProjectMemoryMenu => {
+                self.open_project_memory_menu().await;
+            }
+            AppEvent::ShowProjectMemory => {
+                self.show_project_memory(tui).await?;
+            }
+            AppEvent::EditProjectMemory => {
+                self.edit_project_memory(tui).await?;
+            }
+            AppEvent::ShowProjectMemoryPath => {
+                let path = codex_core::project_memory::project_memory_path(
+                    self.config.codex_home.as_path(),
+                    self.config.cwd.as_path(),
+                );
+                self.chat_widget
+                    .add_info_message(format!("Project memory path: {}", path.display()), None);
+            }
             AppEvent::OpenAppLink {
                 title,
                 description,
@@ -2172,6 +2732,15 @@ impl App {
             AppEvent::SelectAgentThread(thread_id) => {
                 self.select_agent_thread(tui, thread_id).await?;
             }
+            AppEvent::SpawnAgentThread => {
+                self.spawn_agent_thread(tui).await?;
+            }
+            AppEvent::InterruptAgentThread(thread_id) => {
+                self.interrupt_agent_thread(thread_id).await;
+            }
+            AppEvent::CloseAgentThread(thread_id) => {
+                self.close_agent_thread(tui, thread_id).await?;
+            }
             AppEvent::OpenSkillsList => {
                 self.chat_widget.open_skills_list();
             }
@@ -2596,6 +3165,63 @@ impl App {
             }
         });
     }
+}
+
+async fn export_conversation_markdown(
+    config: &Config,
+    rollout_path: &std::path::Path,
+    thread_id: Option<ThreadId>,
+) -> Result<std::path::PathBuf> {
+    let exports_dir = config.codex_home.join("exports");
+    tokio::fs::create_dir_all(&exports_dir)
+        .await
+        .wrap_err_with(|| format!("create exports dir {}", exports_dir.display()))?;
+
+    let ts = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+    let id = thread_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    let output_path = exports_dir.join(format!("export-{ts}-{id}.md"));
+
+    write_rollout_markdown_to_path(rollout_path, &output_path).await?;
+
+    Ok(output_path)
+}
+
+fn live_conversation_markdown_path(config: &Config, thread_id: ThreadId) -> PathBuf {
+    config
+        .codex_home
+        .join("exports")
+        .join(format!("live-{thread_id}.md"))
+}
+
+async fn update_live_conversation_markdown(
+    config: &Config,
+    rollout_path: &std::path::Path,
+    thread_id: ThreadId,
+) -> Result<PathBuf> {
+    let exports_dir = config.codex_home.join("exports");
+    tokio::fs::create_dir_all(&exports_dir)
+        .await
+        .wrap_err_with(|| format!("create exports dir {}", exports_dir.display()))?;
+
+    let output_path = live_conversation_markdown_path(config, thread_id);
+    write_rollout_markdown_to_path(rollout_path, &output_path).await?;
+    Ok(output_path)
+}
+
+async fn write_rollout_markdown_to_path(
+    rollout_path: &std::path::Path,
+    output_path: &std::path::Path,
+) -> Result<()> {
+    let options = codex_core::export_markdown::ExportMarkdownOptions::default();
+    let markdown = codex_core::export_markdown::export_rollout_to_markdown(rollout_path, &options)
+        .await
+        .wrap_err_with(|| format!("export rollout {}", rollout_path.display()))?;
+    tokio::fs::write(output_path, markdown)
+        .await
+        .wrap_err_with(|| format!("write export {}", output_path.display()))?;
+    Ok(())
 }
 
 #[cfg(test)]

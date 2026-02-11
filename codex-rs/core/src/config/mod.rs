@@ -18,6 +18,7 @@ use crate::config::types::ShellEnvironmentPolicy;
 use crate::config::types::ShellEnvironmentPolicyToml;
 use crate::config::types::SkillsConfig;
 use crate::config::types::Tui;
+use crate::config::types::TuiTheme;
 use crate::config::types::UriBasedFileOpener;
 use crate::config_loader::CloudRequirementsLoader;
 use crate::config_loader::ConfigLayerStack;
@@ -216,6 +217,9 @@ pub struct Config {
     /// Notification method for terminal notifications (osc9 or bel).
     pub tui_notification_method: NotificationMethod,
 
+    /// Visual theme preset for the TUI.
+    pub tui_theme: TuiTheme,
+
     /// Enable ASCII animations and shimmer effects in the TUI.
     pub animations: bool,
 
@@ -235,6 +239,9 @@ pub struct Config {
 
     /// Ordered list of status line item identifiers for the TUI.
     pub tui_status_line: Option<Vec<String>>,
+
+    /// Whether to stream a Markdown transcript for the active thread to a stable file.
+    pub tui_stream_markdown_transcript: bool,
 
     /// The directory that should be treated as the current working directory
     /// for the session. All relative paths inside the business-logic layer are
@@ -1791,6 +1798,7 @@ impl Config {
                 .as_ref()
                 .map(|t| t.notification_method)
                 .unwrap_or_default(),
+            tui_theme: cfg.tui.as_ref().map(|t| t.theme).unwrap_or_default(),
             animations: cfg.tui.as_ref().map(|t| t.animations).unwrap_or(true),
             show_tooltips: cfg.tui.as_ref().map(|t| t.show_tooltips).unwrap_or(true),
             experimental_mode: cfg.tui.as_ref().and_then(|t| t.experimental_mode),
@@ -1800,6 +1808,11 @@ impl Config {
                 .map(|t| t.alternate_screen)
                 .unwrap_or_default(),
             tui_status_line: cfg.tui.as_ref().and_then(|t| t.status_line.clone()),
+            tui_stream_markdown_transcript: cfg
+                .tui
+                .as_ref()
+                .map(|t| t.stream_markdown_transcript)
+                .unwrap_or(false),
             otel: {
                 let t: OtelConfigToml = cfg.otel.unwrap_or_default();
                 let log_user_prompt = t.log_user_prompt.unwrap_or(false);
@@ -2033,11 +2046,13 @@ persistence = "none"
             Tui {
                 notifications: Notifications::Enabled(true),
                 notification_method: NotificationMethod::Auto,
+                theme: Default::default(),
                 animations: true,
                 show_tooltips: true,
                 experimental_mode: None,
                 alternate_screen: AltScreenMode::Auto,
                 status_line: None,
+                stream_markdown_transcript: false,
             }
         );
     }
@@ -4059,6 +4074,7 @@ model_verbosity = "high"
                 disable_paste_burst: false,
                 tui_notifications: Default::default(),
                 tui_notification_method: Default::default(),
+                tui_theme: Default::default(),
                 animations: true,
                 show_tooltips: true,
                 experimental_mode: None,
@@ -4066,6 +4082,7 @@ model_verbosity = "high"
                 feedback_enabled: true,
                 tui_alternate_screen: AltScreenMode::Auto,
                 tui_status_line: None,
+                tui_stream_markdown_transcript: false,
                 otel: OtelConfig::default(),
             },
             o3_profile_config
@@ -4148,6 +4165,7 @@ model_verbosity = "high"
             disable_paste_burst: false,
             tui_notifications: Default::default(),
             tui_notification_method: Default::default(),
+            tui_theme: Default::default(),
             animations: true,
             show_tooltips: true,
             experimental_mode: None,
@@ -4155,6 +4173,7 @@ model_verbosity = "high"
             feedback_enabled: true,
             tui_alternate_screen: AltScreenMode::Auto,
             tui_status_line: None,
+            tui_stream_markdown_transcript: false,
             otel: OtelConfig::default(),
         };
 
@@ -4252,6 +4271,7 @@ model_verbosity = "high"
             disable_paste_burst: false,
             tui_notifications: Default::default(),
             tui_notification_method: Default::default(),
+            tui_theme: Default::default(),
             animations: true,
             show_tooltips: true,
             experimental_mode: None,
@@ -4259,6 +4279,7 @@ model_verbosity = "high"
             feedback_enabled: true,
             tui_alternate_screen: AltScreenMode::Auto,
             tui_status_line: None,
+            tui_stream_markdown_transcript: false,
             otel: OtelConfig::default(),
         };
 
@@ -4342,6 +4363,7 @@ model_verbosity = "high"
             disable_paste_burst: false,
             tui_notifications: Default::default(),
             tui_notification_method: Default::default(),
+            tui_theme: Default::default(),
             animations: true,
             show_tooltips: true,
             experimental_mode: None,
@@ -4349,6 +4371,7 @@ model_verbosity = "high"
             feedback_enabled: true,
             tui_alternate_screen: AltScreenMode::Auto,
             tui_status_line: None,
+            tui_stream_markdown_transcript: false,
             otel: OtelConfig::default(),
         };
 

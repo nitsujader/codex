@@ -1023,6 +1023,7 @@ async fn make_chatwidget_manual(
         placeholder_text: "Ask Codex to do anything".to_string(),
         disable_paste_burst: false,
         animations_enabled: cfg.animations,
+        theme: cfg.tui_theme,
         skills: None,
     });
     bottom.set_steer_enabled(true);
@@ -1078,6 +1079,8 @@ async fn make_chatwidget_manual(
         interrupts: InterruptManager::new(),
         reasoning_buffer: String::new(),
         full_reasoning_buffer: String::new(),
+        thinking_note_deck: ThinkingNoteDeck::default(),
+        thinking_status_header: String::from("Working"),
         current_status_header: String::from("Working"),
         retry_status_header: None,
         pending_status_indicator_restore: false,

@@ -12,6 +12,7 @@ use std::path::PathBuf;
 
 use codex_chatgpt::connectors::AppInfo;
 use codex_common::approval_presets::ApprovalPreset;
+use codex_core::config::types::TuiTheme;
 use codex_core::protocol::Event;
 use codex_core::protocol::RateLimitSnapshot;
 use codex_file_search::FileMatch;
@@ -55,6 +56,12 @@ pub(crate) enum AppEvent {
     OpenAgentPicker,
     /// Switch the active thread to the selected agent.
     SelectAgentThread(ThreadId),
+    /// Spawn a new agent thread (sub-agent).
+    SpawnAgentThread,
+    /// Interrupt a specific agent thread.
+    InterruptAgentThread(ThreadId),
+    /// Shut down and remove a specific agent thread.
+    CloseAgentThread(ThreadId),
 
     /// Start a new session.
     NewSession,
@@ -104,6 +111,57 @@ pub(crate) enum AppEvent {
 
     /// Result of computing a `/diff` command.
     DiffResult(String),
+
+    /// Export the current thread rollout to a Markdown file.
+    ExportConversationMarkdown {
+        rollout_path: PathBuf,
+        thread_id: Option<ThreadId>,
+    },
+
+    /// Result of exporting the conversation to Markdown.
+    ExportConversationMarkdownResult {
+        output_path: Option<PathBuf>,
+        error: Option<String>,
+    },
+
+    /// Open the stream-to-Markdown picker for toggling live transcript export.
+    OpenStreamMarkdownPicker,
+    /// Persist the stream-to-Markdown preference.
+    SetStreamMarkdownTranscript {
+        enabled: bool,
+    },
+
+    /// Export the current thread rollout to the stable live Markdown path.
+    UpdateLiveConversationMarkdown {
+        rollout_path: PathBuf,
+        thread_id: ThreadId,
+    },
+    /// Result of updating the stable live Markdown transcript.
+    UpdateLiveConversationMarkdownResult {
+        error: Option<String>,
+    },
+
+    /// Open the theme picker for switching between visual presets.
+    OpenThemePicker,
+    /// Persist a new theme selection.
+    SetTheme(TuiTheme),
+
+    /// Capture a screenshot and attach it to the composer.
+    CaptureScreenshot,
+    /// Result of capturing a screenshot.
+    CaptureScreenshotResult {
+        path: Option<PathBuf>,
+        error: Option<String>,
+    },
+
+    /// Open the project memory menu for the current working directory.
+    OpenProjectMemoryMenu,
+    /// Show the project memory in a pager overlay.
+    ShowProjectMemory,
+    /// Edit the project memory using the user's external editor.
+    EditProjectMemory,
+    /// Print the resolved project memory path.
+    ShowProjectMemoryPath,
 
     /// Open the app link view in the bottom pane.
     OpenAppLink {

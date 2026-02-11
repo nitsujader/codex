@@ -7,10 +7,12 @@
 use std::time::Duration;
 use std::time::Instant;
 
+use codex_core::config::types::TuiTheme;
 use codex_core::protocol::Op;
 use crossterm::event::KeyCode;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use ratatui::style::Color;
 use ratatui::style::Stylize;
 use ratatui::text::Line;
 use ratatui::text::Span;
@@ -41,6 +43,7 @@ pub(crate) struct StatusIndicatorWidget {
     /// Optional suffix rendered after the elapsed/interrupt segment.
     inline_message: Option<String>,
     show_interrupt_hint: bool,
+    theme: TuiTheme,
 
     elapsed_running: Duration,
     last_resume_at: Instant,
@@ -72,12 +75,14 @@ impl StatusIndicatorWidget {
         app_event_tx: AppEventSender,
         frame_requester: FrameRequester,
         animations_enabled: bool,
+        theme: TuiTheme,
     ) -> Self {
         Self {
             header: String::from("Working"),
             details: None,
             inline_message: None,
             show_interrupt_hint: true,
+            theme,
             elapsed_running: Duration::ZERO,
             last_resume_at: Instant::now(),
             is_paused: false,
@@ -86,6 +91,10 @@ impl StatusIndicatorWidget {
             frame_requester,
             animations_enabled,
         }
+    }
+
+    pub(crate) fn set_theme(&mut self, theme: TuiTheme) {
+        self.theme = theme;
     }
 
     pub(crate) fn interrupt(&self) {
@@ -226,8 +235,30 @@ impl Renderable for StatusIndicatorWidget {
         let pretty_elapsed = fmt_elapsed_compact(elapsed_duration.as_secs());
 
         let mut spans = Vec::with_capacity(5);
-        spans.push(spinner(Some(self.last_resume_at), self.animations_enabled));
+        let accent = match self.theme {
+            TuiTheme::Default => Some(Color::Cyan),
+            TuiTheme::Fallout | TuiTheme::Matrix => Some(Color::Green),
+            TuiTheme::Cyberpunk => Some(Color::Magenta),
+        };
+        let prefix = match self.theme {
+            TuiTheme::Default => None,
+            TuiTheme::Fallout => Some("PIP"),
+            TuiTheme::Cyberpunk => Some("NEON"),
+            TuiTheme::Matrix => Some("MATRIX"),
+        };
+
+        let mut spin = spinner(Some(self.last_resume_at), self.animations_enabled);
+        if let Some(accent) = accent {
+            spin = spin.fg(accent);
+        }
+        spans.push(spin);
         spans.push(" ".into());
+        if let Some(prefix) = prefix
+            && let Some(accent) = accent
+        {
+            spans.push(format!("[{prefix}]").fg(accent).bold());
+            spans.push(" ".into());
+        }
         if self.animations_enabled {
             spans.extend(shimmer_spans(&self.header));
         } else if !self.header.is_empty() {
@@ -294,7 +325,12 @@ mod tests {
     fn renders_with_working_header() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
-        let w = StatusIndicatorWidget::new(tx, crate::tui::FrameRequester::test_dummy(), true);
+        let w = StatusIndicatorWidget::new(
+            tx,
+            crate::tui::FrameRequester::test_dummy(),
+            true,
+            Default::default(),
+        );
 
         // Render into a fixed-size test terminal and snapshot the backend.
         let mut terminal = Terminal::new(TestBackend::new(80, 2)).expect("terminal");
@@ -308,7 +344,12 @@ mod tests {
     fn renders_truncated() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
-        let w = StatusIndicatorWidget::new(tx, crate::tui::FrameRequester::test_dummy(), true);
+        let w = StatusIndicatorWidget::new(
+            tx,
+            crate::tui::FrameRequester::test_dummy(),
+            true,
+            Default::default(),
+        );
 
         // Render into a fixed-size test terminal and snapshot the backend.
         let mut terminal = Terminal::new(TestBackend::new(20, 2)).expect("terminal");
@@ -322,7 +363,12 @@ mod tests {
     fn renders_wrapped_details_panama_two_lines() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
-        let mut w = StatusIndicatorWidget::new(tx, crate::tui::FrameRequester::test_dummy(), false);
+        let mut w = StatusIndicatorWidget::new(
+            tx,
+            crate::tui::FrameRequester::test_dummy(),
+            false,
+            Default::default(),
+        );
         w.update_details(Some("A man a plan a canal panama".to_string()));
         w.set_interrupt_hint_visible(false);
 
@@ -343,8 +389,12 @@ mod tests {
     fn timer_pauses_when_requested() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
-        let mut widget =
-            StatusIndicatorWidget::new(tx, crate::tui::FrameRequester::test_dummy(), true);
+        let mut widget = StatusIndicatorWidget::new(
+            tx,
+            crate::tui::FrameRequester::test_dummy(),
+            true,
+            Default::default(),
+        );
 
         let baseline = Instant::now();
         widget.last_resume_at = baseline;
@@ -365,7 +415,12 @@ mod tests {
     fn details_overflow_adds_ellipsis() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
-        let mut w = StatusIndicatorWidget::new(tx, crate::tui::FrameRequester::test_dummy(), true);
+        let mut w = StatusIndicatorWidget::new(
+            tx,
+            crate::tui::FrameRequester::test_dummy(),
+            true,
+            Default::default(),
+        );
         w.update_details(Some("abcd abcd abcd abcd".to_string()));
 
         let lines = w.wrapped_details_lines(6);

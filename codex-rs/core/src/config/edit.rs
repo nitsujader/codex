@@ -1,6 +1,7 @@
 use crate::config::CONFIG_TOML_FILE;
 use crate::config::types::McpServerConfig;
 use crate::config::types::Notice;
+use crate::config::types::TuiTheme;
 use crate::path_utils::resolve_symlink_write_paths;
 use crate::path_utils::write_atomically;
 use anyhow::Context;
@@ -70,6 +71,32 @@ pub fn status_line_items_edit(items: &[String]) -> ConfigEdit {
     ConfigEdit::SetPath {
         segments: vec!["tui".to_string(), "status_line".to_string()],
         value: TomlItem::Value(array.into()),
+    }
+}
+
+pub fn tui_theme_edit(theme: TuiTheme) -> ConfigEdit {
+    if matches!(theme, TuiTheme::Default) {
+        return ConfigEdit::ClearPath {
+            segments: vec!["tui".to_string(), "theme".to_string()],
+        };
+    }
+
+    ConfigEdit::SetPath {
+        segments: vec!["tui".to_string(), "theme".to_string()],
+        value: value(theme.to_string()),
+    }
+}
+
+pub fn tui_stream_markdown_transcript_edit(enabled: bool) -> ConfigEdit {
+    if !enabled {
+        return ConfigEdit::ClearPath {
+            segments: vec!["tui".to_string(), "stream_markdown_transcript".to_string()],
+        };
+    }
+
+    ConfigEdit::SetPath {
+        segments: vec!["tui".to_string(), "stream_markdown_transcript".to_string()],
+        value: value(true),
     }
 }
 

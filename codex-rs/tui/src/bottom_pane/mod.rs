@@ -26,6 +26,7 @@ use crate::render::renderable::Renderable;
 use crate::render::renderable::RenderableItem;
 use crate::tui::FrameRequester;
 use bottom_pane_view::BottomPaneView;
+use codex_core::config::types::TuiTheme;
 use codex_core::features::Features;
 use codex_core::skills::model::SkillMetadata;
 use codex_file_search::FileMatch;
@@ -155,6 +156,7 @@ pub(crate) struct BottomPane {
     is_task_running: bool,
     esc_backtrack_hint: bool,
     animations_enabled: bool,
+    theme: TuiTheme,
 
     /// Inline status indicator shown above the composer while a task is running.
     status: Option<StatusIndicatorWidget>,
@@ -177,6 +179,7 @@ pub(crate) struct BottomPaneParams {
     pub(crate) placeholder_text: String,
     pub(crate) disable_paste_burst: bool,
     pub(crate) animations_enabled: bool,
+    pub(crate) theme: TuiTheme,
     pub(crate) skills: Option<Vec<SkillMetadata>>,
 }
 
@@ -190,6 +193,7 @@ impl BottomPane {
             placeholder_text,
             disable_paste_burst,
             animations_enabled,
+            theme,
             skills,
         } = params;
         let mut composer = ChatComposer::new(
@@ -215,9 +219,21 @@ impl BottomPane {
             queued_user_messages: QueuedUserMessages::new(),
             esc_backtrack_hint: false,
             animations_enabled,
+            theme,
             context_window_percent: None,
             context_window_used_tokens: None,
         }
+    }
+
+    pub(crate) fn set_theme(&mut self, theme: TuiTheme) {
+        if self.theme == theme {
+            return;
+        }
+        self.theme = theme;
+        if let Some(status) = self.status.as_mut() {
+            status.set_theme(theme);
+        }
+        self.request_redraw();
     }
 
     pub fn set_skills(&mut self, skills: Option<Vec<SkillMetadata>>) {
@@ -604,6 +620,7 @@ impl BottomPane {
                         self.app_event_tx.clone(),
                         self.frame_requester.clone(),
                         self.animations_enabled,
+                        self.theme,
                     ));
                 }
                 if let Some(status) = self.status.as_mut() {
@@ -631,6 +648,7 @@ impl BottomPane {
                 self.app_event_tx.clone(),
                 self.frame_requester.clone(),
                 self.animations_enabled,
+                self.theme,
             ));
             self.sync_status_inline_message();
             self.request_redraw();
@@ -1006,6 +1024,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
         pane.push_approval_request(exec_request(), &features);
@@ -1029,6 +1048,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1063,6 +1083,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1130,6 +1151,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1157,6 +1179,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1188,6 +1211,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1211,6 +1235,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1240,6 +1265,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1271,6 +1297,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1299,6 +1326,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1326,6 +1354,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(vec![SkillMetadata {
                 name: "test-skill".to_string(),
                 description: "test skill".to_string(),
@@ -1372,6 +1401,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1407,6 +1437,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 
@@ -1463,6 +1494,7 @@ mod tests {
             placeholder_text: "Ask Codex to do anything".to_string(),
             disable_paste_burst: false,
             animations_enabled: true,
+            theme: Default::default(),
             skills: Some(Vec::new()),
         });
 

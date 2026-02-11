@@ -2,6 +2,7 @@ use std::ffi::OsString;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
 
 pub use runfiles;
 
@@ -43,7 +44,8 @@ pub fn cargo_bin(name: &str) -> Result<PathBuf, CargoBinError> {
             return resolve_bin_from_env(key, value);
         }
     }
-    match assert_cmd::Command::cargo_bin(name) {
+
+    let first_err = match assert_cmd::Command::cargo_bin(name) {
         Ok(cmd) => {
             let mut path = PathBuf::from(cmd.get_program());
             if !path.is_absolute() {
@@ -52,20 +54,55 @@ pub fn cargo_bin(name: &str) -> Result<PathBuf, CargoBinError> {
                     .join(path);
             }
             if path.exists() {
-                Ok(path)
-            } else {
-                Err(CargoBinError::ResolvedPathDoesNotExist {
-                    key: "assert_cmd::Command::cargo_bin".to_owned(),
-                    path,
-                })
+                return Ok(path);
+            }
+            CargoBinError::ResolvedPathDoesNotExist {
+                key: "assert_cmd::Command::cargo_bin".to_owned(),
+                path,
             }
         }
-        Err(err) => Err(CargoBinError::NotFound {
+        Err(err) => CargoBinError::NotFound {
             name: name.to_owned(),
             env_keys,
             fallback: format!("assert_cmd fallback failed: {err}"),
-        }),
+        },
+    };
+
+    // When a test needs a workspace binary from a *different* crate (e.g. `test_stdio_server`),
+    // `CARGO_BIN_EXE_*` won't be set and `assert_cmd` won't find it unless it has already been
+    // built. Under Cargo (not Bazel), do a best-effort build and retry once.
+    if !runfiles_available() {
+        let cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let workspace_root = manifest_dir
+            .parent()
+            .and_then(|p| p.parent())
+            .map(Path::to_path_buf);
+
+        if let Some(workspace_root) = workspace_root
+            && let Ok(status) = Command::new(cargo)
+                .arg("build")
+                .arg("--quiet")
+                .arg("--bin")
+                .arg(name)
+                .current_dir(workspace_root)
+                .status()
+            && status.success()
+            && let Ok(cmd) = assert_cmd::Command::cargo_bin(name)
+        {
+            let mut path = PathBuf::from(cmd.get_program());
+            if !path.is_absolute() {
+                path = std::env::current_dir()
+                    .map_err(|source| CargoBinError::CurrentDir { source })?
+                    .join(path);
+            }
+            if path.exists() {
+                return Ok(path);
+            }
+        }
     }
+
+    Err(first_err)
 }
 
 fn cargo_bin_env_keys(name: &str) -> Vec<String> {

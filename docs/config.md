@@ -24,6 +24,14 @@ Codex can run a notification hook when the agent finishes a turn. See the config
 
 - https://developers.openai.com/codex/config-reference
 
+## TUI
+
+Some TUI-specific settings live under the `[tui]` table in `~/.codex/config.toml`:
+
+- `theme`: `default`, `fallout`, `cyberpunk`, `matrix`
+- `stream_markdown_transcript`: when `true`, Codex writes a live Markdown transcript under `CODEX_HOME/exports/live-<threadId>.md`
+- `notification_method`: `auto`, `osc9`, `bel`, `windows_toast` (Windows)
+
 ## JSON Schema
 
 The generated JSON Schema for `config.toml` lives at `codex-rs/core/config.schema.json`.

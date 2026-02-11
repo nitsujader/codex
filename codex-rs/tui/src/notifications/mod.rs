@@ -1,31 +1,53 @@
 mod bel;
 mod osc9;
+#[cfg(windows)]
+mod windows_toast;
 
-use std::env;
 use std::io;
 
 use bel::BelBackend;
 use codex_core::config::types::NotificationMethod;
 use osc9::Osc9Backend;
+#[cfg(windows)]
+use windows_toast::WindowsToastBackend;
 
 #[derive(Debug)]
 pub enum DesktopNotificationBackend {
     Osc9(Osc9Backend),
     Bel(BelBackend),
+    #[cfg(windows)]
+    WindowsToast(WindowsToastBackend),
 }
 
 impl DesktopNotificationBackend {
     pub fn for_method(method: NotificationMethod) -> Self {
         match method {
             NotificationMethod::Auto => {
-                if supports_osc9() {
-                    Self::Osc9(Osc9Backend)
-                } else {
-                    Self::Bel(BelBackend)
+                #[cfg(windows)]
+                {
+                    Self::WindowsToast(WindowsToastBackend::new())
+                }
+                #[cfg(not(windows))]
+                {
+                    if supports_osc9() {
+                        Self::Osc9(Osc9Backend)
+                    } else {
+                        Self::Bel(BelBackend)
+                    }
                 }
             }
             NotificationMethod::Osc9 => Self::Osc9(Osc9Backend),
             NotificationMethod::Bel => Self::Bel(BelBackend),
+            NotificationMethod::WindowsToast => {
+                #[cfg(windows)]
+                {
+                    Self::WindowsToast(WindowsToastBackend::new())
+                }
+                #[cfg(not(windows))]
+                {
+                    Self::Bel(BelBackend)
+                }
+            }
         }
     }
 
@@ -33,6 +55,8 @@ impl DesktopNotificationBackend {
         match self {
             DesktopNotificationBackend::Osc9(_) => NotificationMethod::Osc9,
             DesktopNotificationBackend::Bel(_) => NotificationMethod::Bel,
+            #[cfg(windows)]
+            DesktopNotificationBackend::WindowsToast(_) => NotificationMethod::WindowsToast,
         }
     }
 
@@ -40,6 +64,8 @@ impl DesktopNotificationBackend {
         match self {
             DesktopNotificationBackend::Osc9(backend) => backend.notify(message),
             DesktopNotificationBackend::Bel(backend) => backend.notify(message),
+            #[cfg(windows)]
+            DesktopNotificationBackend::WindowsToast(backend) => backend.notify(message),
         }
     }
 }
@@ -48,25 +74,26 @@ pub fn detect_backend(method: NotificationMethod) -> DesktopNotificationBackend 
     DesktopNotificationBackend::for_method(method)
 }
 
+#[cfg(not(windows))]
 fn supports_osc9() -> bool {
-    if env::var_os("WT_SESSION").is_some() {
+    if std::env::var_os("WT_SESSION").is_some() {
         return false;
     }
     // Prefer TERM_PROGRAM when present, but keep fallbacks for shells/launchers
     // that don't set it (e.g., tmux/ssh) to avoid regressing OSC 9 support.
     if matches!(
-        env::var("TERM_PROGRAM").ok().as_deref(),
+        std::env::var("TERM_PROGRAM").ok().as_deref(),
         Some("WezTerm" | "ghostty")
     ) {
         return true;
     }
     // iTerm still provides a strong session signal even when TERM_PROGRAM is missing.
-    if env::var_os("ITERM_SESSION_ID").is_some() {
+    if std::env::var_os("ITERM_SESSION_ID").is_some() {
         return true;
     }
     // TERM-based hints cover kitty/wezterm setups without TERM_PROGRAM.
     matches!(
-        env::var("TERM").ok().as_deref(),
+        std::env::var("TERM").ok().as_deref(),
         Some("xterm-kitty" | "wezterm" | "wezterm-mux")
     )
 }
@@ -76,13 +103,16 @@ mod tests {
     use super::detect_backend;
     use codex_core::config::types::NotificationMethod;
     use serial_test::serial;
+    #[cfg(not(windows))]
     use std::ffi::OsString;
 
+    #[cfg(not(windows))]
     struct EnvVarGuard {
         key: &'static str,
         original: Option<OsString>,
     }
 
+    #[cfg(not(windows))]
     impl EnvVarGuard {
         fn set(key: &'static str, value: &str) -> Self {
             let original = std::env::var_os(key);
@@ -101,6 +131,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(windows))]
     impl Drop for EnvVarGuard {
         fn drop(&mut self) {
             unsafe {
@@ -130,6 +161,17 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg(windows)]
+    fn auto_uses_windows_toast() {
+        assert!(matches!(
+            detect_backend(NotificationMethod::Auto),
+            super::DesktopNotificationBackend::WindowsToast(_)
+        ));
+    }
+
+    #[test]
+    #[serial]
+    #[cfg(not(windows))]
     fn auto_prefers_bel_without_hints() {
         let _term = EnvVarGuard::remove("TERM");
         let _term_program = EnvVarGuard::remove("TERM_PROGRAM");
@@ -143,6 +185,7 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg(not(windows))]
     fn auto_uses_osc9_for_iterm() {
         let _term = EnvVarGuard::remove("TERM");
         let _term_program = EnvVarGuard::remove("TERM_PROGRAM");

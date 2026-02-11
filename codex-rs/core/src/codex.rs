@@ -2293,6 +2293,20 @@ impl Session {
                 .into(),
             );
         }
+        if let Some(project_memory) = crate::project_memory::read_project_memory(
+            turn_context.config.codex_home.as_path(),
+            turn_context.cwd.as_path(),
+        )
+        .await
+        {
+            items.push(
+                DeveloperInstructions::new(format!(
+                    "Project memory for {cwd}:\n\n{project_memory}\n\n(End project memory)",
+                    cwd = turn_context.cwd.display()
+                ))
+                .into(),
+            );
+        }
         items.push(ResponseItem::from(EnvironmentContext::from_turn_context(
             turn_context,
             shell.as_ref(),

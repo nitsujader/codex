@@ -31,6 +31,11 @@ pub enum SlashCommand {
     Agent,
     // Undo,
     Diff,
+    Export,
+    Stream,
+    Screenshot,
+    Theme,
+    Memory,
     Mention,
     Status,
     DebugConfig,
@@ -63,6 +68,11 @@ impl SlashCommand {
             // SlashCommand::Undo => "ask Codex to undo a turn",
             SlashCommand::Quit | SlashCommand::Exit => "exit Codex",
             SlashCommand::Diff => "show git diff (including untracked files)",
+            SlashCommand::Export => "export the current conversation to Markdown",
+            SlashCommand::Stream => "stream the conversation to a Markdown file",
+            SlashCommand::Screenshot => "capture a screenshot and attach it",
+            SlashCommand::Theme => "switch between visual themes",
+            SlashCommand::Memory => "view or edit project memory for this directory",
             SlashCommand::Mention => "mention a file",
             SlashCommand::Skills => "use skills to improve how Codex performs specific tasks",
             SlashCommand::Status => "show current session configuration and token usage",
@@ -120,6 +130,11 @@ impl SlashCommand {
             | SlashCommand::Plan
             | SlashCommand::Logout => false,
             SlashCommand::Diff
+            | SlashCommand::Export
+            | SlashCommand::Stream
+            | SlashCommand::Screenshot
+            | SlashCommand::Theme
+            | SlashCommand::Memory
             | SlashCommand::Rename
             | SlashCommand::Mention
             | SlashCommand::Skills

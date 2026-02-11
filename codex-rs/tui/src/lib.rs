@@ -91,6 +91,7 @@ mod pager_overlay;
 pub mod public_widgets;
 mod render;
 mod resume_picker;
+mod screenshot;
 mod selection_list;
 mod session_log;
 mod shimmer;

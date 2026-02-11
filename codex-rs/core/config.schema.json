@@ -548,7 +548,8 @@
       "enum": [
         "auto",
         "osc9",
-        "bel"
+        "bel",
+        "windows_toast"
       ],
       "type": "string"
     },
@@ -1095,9 +1096,32 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "stream_markdown_transcript": {
+          "default": false,
+          "description": "Stream a Markdown transcript for the active thread to a stable file under `CODEX_HOME/exports/live-<threadId>.md`.\n\nThis is updated opportunistically after each turn completes. Defaults to `false`.",
+          "type": "boolean"
+        },
+        "theme": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/TuiTheme"
+            }
+          ],
+          "default": "default",
+          "description": "Visual theme preset for the TUI. Defaults to `default`."
         }
       },
       "type": "object"
+    },
+    "TuiTheme": {
+      "enum": [
+        "default",
+        "fallout",
+        "cyberpunk",
+        "matrix"
+      ],
+      "type": "string"
     },
     "UriBasedFileOpener": {
       "oneOf": [

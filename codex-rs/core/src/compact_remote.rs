@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::Prompt;
 use crate::codex::Session;
 use crate::codex::TurnContext;
+use crate::compact;
 use crate::context_manager::ContextManager;
 use crate::context_manager::TotalTokenUsageBreakdown;
 use crate::context_manager::estimate_response_item_model_visible_bytes;
@@ -86,6 +87,12 @@ async fn run_remote_compact_task_inner_impl(
         .cloned()
         .collect();
 
+    let pinned_original_prompt = compact::collect_user_messages(history.raw_items())
+        .into_iter()
+        .next()
+        .map(|message| message.trim().to_string())
+        .filter(|message| !message.is_empty());
+
     let prompt = Prompt {
         input: history.for_prompt(),
         tools: vec![],
@@ -120,6 +127,10 @@ async fn run_remote_compact_task_inner_impl(
         .process_compacted_history(turn_context, new_history)
         .await;
 
+    if let Some(pinned) = pinned_original_prompt.as_deref() {
+        insert_pinned_user_message_if_missing(pinned, &mut new_history);
+    }
+
     if !ghost_snapshots.is_empty() {
         new_history.extend(ghost_snapshots);
     }
@@ -136,6 +147,37 @@ async fn run_remote_compact_task_inner_impl(
     sess.emit_turn_item_completed(turn_context, compaction_item)
         .await;
     Ok(())
+}
+
+fn insert_pinned_user_message_if_missing(pinned: &str, history: &mut Vec<ResponseItem>) {
+    let pinned_trimmed = pinned.trim();
+    if pinned_trimmed.is_empty() {
+        return;
+    }
+
+    let already_present = history.iter().any(|item| match item {
+        ResponseItem::Message { role, content, .. } if role == "user" => {
+            compact::content_items_to_text(content)
+                .is_some_and(|text| text.trim() == pinned_trimmed)
+        }
+        _ => false,
+    });
+    if already_present {
+        return;
+    }
+
+    history.insert(
+        0,
+        ResponseItem::Message {
+            id: None,
+            role: "user".to_string(),
+            content: vec![codex_protocol::models::ContentItem::InputText {
+                text: pinned_trimmed.to_string(),
+            }],
+            end_turn: None,
+            phase: None,
+        },
+    );
 }
 
 #[derive(Debug)]

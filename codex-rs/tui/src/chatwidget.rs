@@ -49,6 +49,7 @@ use codex_chatgpt::connectors;
 use codex_core::config::Config;
 use codex_core::config::ConstraintResult;
 use codex_core::config::types::Notifications;
+use codex_core::config::types::TuiTheme;
 use codex_core::config_loader::ConfigLayerStackOrdering;
 use codex_core::features::FEATURES;
 use codex_core::features::Feature;
@@ -133,6 +134,7 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
 use rand::Rng;
+use rand::seq::SliceRandom;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -471,6 +473,49 @@ pub(crate) enum ExternalEditorState {
     Active,
 }
 
+#[derive(Debug, Default)]
+struct ThinkingNoteDeck {
+    theme: TuiTheme,
+    remaining: Vec<&'static str>,
+    last: Option<&'static str>,
+}
+
+impl ThinkingNoteDeck {
+    fn next_for_theme(&mut self, theme: TuiTheme) -> String {
+        let notes = thinking_notes_for_theme(theme);
+        if cfg!(test) {
+            // Keep snapshots deterministic.
+            return notes.first().copied().unwrap_or("Working").to_string();
+        }
+
+        if self.remaining.is_empty() || self.theme != theme {
+            self.theme = theme;
+            self.remaining = notes.to_vec();
+            let mut rng = rand::rng();
+            self.remaining.shuffle(&mut rng);
+            // Avoid repeating the most recent note when the deck resets.
+            if let Some(last) = self.last
+                && self.remaining.len() > 1
+                && self.remaining.last().is_some_and(|note| *note == last)
+            {
+                let last_idx = self.remaining.len() - 1;
+                self.remaining.swap(0, last_idx);
+            }
+        }
+
+        let mut note = self.remaining.pop().unwrap_or("Working");
+        // Avoid an immediate repeat if the list contains duplicate entries (or if the deck was
+        // seeded poorly).
+        if Some(note) == self.last && !self.remaining.is_empty() {
+            let alt = self.remaining.pop().unwrap_or(note);
+            self.remaining.push(note);
+            note = alt;
+        }
+        self.last = Some(note);
+        note.to_string()
+    }
+}
+
 /// Maintains the per-session UI state and interaction state machines for the chat screen.
 ///
 /// `ChatWidget` owns the state derived from the protocol event stream (history cells, streaming
@@ -548,6 +593,10 @@ pub(crate) struct ChatWidget {
     reasoning_buffer: String,
     // Accumulates full reasoning content for transcript-only recording
     full_reasoning_buffer: String,
+    // Cycles through fun "working" headers without frequent repeats.
+    thinking_note_deck: ThinkingNoteDeck,
+    // The stable "thinking" header for this turn (used when restoring after transient headers).
+    thinking_status_header: String,
     // Current status header shown in the status indicator.
     current_status_header: String,
     // Previous status header to restore after a transient stream retry.
@@ -796,7 +845,12 @@ impl ChatWidget {
         if let Some(header) = extract_first_bold(&self.reasoning_buffer) {
             self.set_status_header(header);
         } else if self.bottom_pane.is_task_running() {
-            self.set_status_header(String::from("Working"));
+            let header = if self.thinking_status_header.trim().is_empty() {
+                self.pick_new_thinking_status_header()
+            } else {
+                self.thinking_status_header.clone()
+            };
+            self.set_status_header(header);
         }
     }
 
@@ -863,6 +917,28 @@ impl ChatWidget {
     /// updates the status indicator header and clears any existing details.
     fn set_status_header(&mut self, header: String) {
         self.set_status(header, None);
+    }
+
+    fn pick_new_thinking_status_header(&mut self) -> String {
+        let header = self
+            .thinking_note_deck
+            .next_for_theme(self.config.tui_theme);
+        self.thinking_status_header = header.clone();
+        header
+    }
+
+    pub(crate) fn set_theme(&mut self, theme: TuiTheme) {
+        self.config.tui_theme = theme;
+        self.bottom_pane.set_theme(theme);
+        let header = self.pick_new_thinking_status_header();
+        if !self.bottom_pane.is_task_running() {
+            self.set_status_header(header);
+        }
+        self.request_redraw();
+    }
+
+    pub(crate) fn set_stream_markdown_transcript_enabled(&mut self, enabled: bool) {
+        self.config.tui_stream_markdown_transcript = enabled;
     }
 
     /// Sets the currently rendered footer status-line value.
@@ -1307,7 +1383,8 @@ impl ChatWidget {
         self.retry_status_header = None;
         self.pending_status_indicator_restore = false;
         self.bottom_pane.set_interrupt_hint_visible(true);
-        self.set_status_header(String::from("Working"));
+        let header = self.pick_new_thinking_status_header();
+        self.set_status_header(header);
         self.full_reasoning_buffer.clear();
         self.reasoning_buffer.clear();
         self.request_redraw();
@@ -1370,6 +1447,18 @@ impl ChatWidget {
         self.notify(Notification::AgentTurnComplete {
             response: last_agent_message.unwrap_or_default(),
         });
+
+        if !from_replay
+            && self.config.tui_stream_markdown_transcript
+            && let Some(rollout_path) = self.rollout_path()
+            && let Some(thread_id) = self.thread_id
+        {
+            self.app_event_tx
+                .send(AppEvent::UpdateLiveConversationMarkdown {
+                    rollout_path,
+                    thread_id,
+                });
+        }
 
         self.maybe_show_pending_rate_limit_prompt();
     }
@@ -2595,6 +2684,7 @@ impl ChatWidget {
                 placeholder_text: placeholder,
                 disable_paste_burst: config.disable_paste_burst,
                 animations_enabled: config.animations,
+                theme: config.tui_theme,
                 skills: None,
             }),
             active_cell,
@@ -2631,6 +2721,8 @@ impl ChatWidget {
             interrupts: InterruptManager::new(),
             reasoning_buffer: String::new(),
             full_reasoning_buffer: String::new(),
+            thinking_note_deck: ThinkingNoteDeck::default(),
+            thinking_status_header: String::from("Working"),
             current_status_header: String::from("Working"),
             retry_status_header: None,
             pending_status_indicator_restore: false,
@@ -2759,6 +2851,7 @@ impl ChatWidget {
                 placeholder_text: placeholder,
                 disable_paste_burst: config.disable_paste_burst,
                 animations_enabled: config.animations,
+                theme: config.tui_theme,
                 skills: None,
             }),
             active_cell,
@@ -2795,6 +2888,8 @@ impl ChatWidget {
             interrupts: InterruptManager::new(),
             reasoning_buffer: String::new(),
             full_reasoning_buffer: String::new(),
+            thinking_note_deck: ThinkingNoteDeck::default(),
+            thinking_status_header: String::from("Working"),
             current_status_header: String::from("Working"),
             retry_status_header: None,
             pending_status_indicator_restore: false,
@@ -2912,6 +3007,7 @@ impl ChatWidget {
                 placeholder_text: placeholder,
                 disable_paste_burst: config.disable_paste_burst,
                 animations_enabled: config.animations,
+                theme: config.tui_theme,
                 skills: None,
             }),
             active_cell: None,
@@ -2948,6 +3044,8 @@ impl ChatWidget {
             interrupts: InterruptManager::new(),
             reasoning_buffer: String::new(),
             full_reasoning_buffer: String::new(),
+            thinking_note_deck: ThinkingNoteDeck::default(),
+            thinking_status_header: String::from("Working"),
             current_status_header: String::from("Working"),
             retry_status_header: None,
             pending_status_indicator_restore: false,
@@ -3369,6 +3467,29 @@ impl ChatWidget {
                     };
                     tx.send(AppEvent::DiffResult(text));
                 });
+            }
+            SlashCommand::Export => {
+                if let Some(rollout_path) = self.rollout_path() {
+                    self.app_event_tx
+                        .send(AppEvent::ExportConversationMarkdown {
+                            rollout_path,
+                            thread_id: self.thread_id,
+                        });
+                } else {
+                    self.add_info_message("Rollout path is not available yet.".to_string(), None);
+                }
+            }
+            SlashCommand::Stream => {
+                self.app_event_tx.send(AppEvent::OpenStreamMarkdownPicker);
+            }
+            SlashCommand::Screenshot => {
+                self.app_event_tx.send(AppEvent::CaptureScreenshot);
+            }
+            SlashCommand::Theme => {
+                self.app_event_tx.send(AppEvent::OpenThemePicker);
+            }
+            SlashCommand::Memory => {
+                self.app_event_tx.send(AppEvent::OpenProjectMemoryMenu);
             }
             SlashCommand::Mention => {
                 self.insert_str("@");
@@ -7094,6 +7215,302 @@ const PLACEHOLDERS: [&str; 8] = [
     "Run /review on my current changes",
     "Use /skills to list available skills",
 ];
+
+const THINKING_NOTES_DEFAULT: &[&str] = &[
+    "Working",
+    "Thinking",
+    "Crunching",
+    "Stitching context",
+    "Lining things up",
+    "Connecting dots",
+    "Warming up",
+    "On it",
+    "One sec",
+    "In the zone",
+    "Locking in",
+    "Spinning up",
+    "Dialing it in",
+    "Sketching a plan",
+    "Parsing the ask",
+    "Reading the room",
+    "Sorting signals",
+    "Scanning history",
+    "Replaying context",
+    "Mapping dependencies",
+    "Following the trail",
+    "Pulling on threads",
+    "Untangling knots",
+    "Chasing edge cases",
+    "Hunting the bug",
+    "Checking assumptions",
+    "Checking invariants",
+    "Weighing tradeoffs",
+    "Counting tokens",
+    "Measuring blast radius",
+    "Laying out steps",
+    "Stacking facts",
+    "Filling in gaps",
+    "Making it concrete",
+    "Getting bearings",
+    "Zooming in",
+    "Zooming out",
+    "Narrowing the search",
+    "Picking the lever",
+    "Finding the smallest change",
+    "Drafting a patch",
+    "Polishing the fix",
+    "Sanding rough edges",
+    "Sharpening the answer",
+    "Cross-checking",
+    "Sanity checking",
+    "Triaging",
+    "Reading the diffs",
+    "Scanning docs",
+    "Tracing code paths",
+    "Walking the stack",
+    "Following the data",
+    "Tracing causality",
+    "Rebuilding the mental model",
+    "Making a checklist",
+    "Threading the needle",
+    "Folding the map",
+    "Aligning constraints",
+    "Choosing defaults",
+    "Picking a direction",
+    "Testing the edges",
+    "Searching for a repro",
+    "Hunting the culprit",
+    "Watching for footguns",
+    "Looking for sharp edges",
+    "Mapping the flow",
+    "Checking the protocol",
+    "Peeking at the schema",
+    "Reading the contract",
+    "Smelling for regressions",
+    "Keeping it tight",
+    "Keeping it simple",
+    "Carving the MVP",
+    "Staging the steps",
+    "Building guardrails",
+    "Tightening bolts",
+    "Wiring it up",
+    "Connecting the graph",
+    "Cutting noise",
+    "Clearing the fog",
+    "Negotiating with Clippy",
+    "Appeasing the borrow checker",
+    "Bribing the compiler",
+    "Pinning the prompt",
+    "Compacting thoughts",
+    "Summarizing",
+    "Making it shippable",
+    "Putting a bow on it",
+    "Almost there",
+    "Calibrating",
+];
+
+const THINKING_NOTES_FALLOUT: &[&str] = &[
+    "Working",
+    "Checking the Pip-Boy",
+    "Scavenging context",
+    "Tuning the radio",
+    "Patching it up",
+    "Recalibrating",
+    "Taking inventory",
+    "Plotting a route",
+    "Hunting signal",
+    "Counting caps",
+    "Sorting scrap",
+    "Checking rads",
+    "Changing filters",
+    "Hacking a terminal",
+    "Picking a lock",
+    "Loading a holotape",
+    "Reading the field notes",
+    "Rerouting power",
+    "Charging a fusion core",
+    "Fixing the generator",
+    "Splicing wires",
+    "Duct-taping it",
+    "Jury-rigging",
+    "On the workbench",
+    "Tightening a bolt",
+    "Repairing armor",
+    "Sharpening a blade",
+    "Cleaning the rifle",
+    "Packing supplies",
+    "Setting waypoints",
+    "Marking the map",
+    "Surveying the wasteland",
+    "Clearing the ruins",
+    "Listening to static",
+    "Tuning the antenna",
+    "Rebooting the turret",
+    "Calibrating the scope",
+    "Making camp",
+    "Cooking up a fix",
+    "Mixing chems",
+    "Checking the stash",
+    "Sorting loot",
+    "Opening the crate",
+    "Sealing the hatch",
+    "Powering up",
+    "Rationing water",
+    "Waiting out the storm",
+    "Securing the perimeter",
+    "Fixing the relay",
+    "Aligning the dish",
+    "Scrubbing rust",
+    "Prying it open",
+    "Paging through a manual",
+    "Trading for parts",
+    "Hammering it into shape",
+    "Checking the blueprint",
+    "Writing it on a clipboard",
+    "Patching the vault door",
+    "Resetting the breaker",
+    "Testing the circuit",
+    "Soldering a patch",
+    "Rolling a stimpack",
+    "Putting it back together",
+    "Setting the dial",
+    "Running diagnostics",
+    "Back to the drawing board",
+];
+
+const THINKING_NOTES_CYBERPUNK: &[&str] = &[
+    "Working",
+    "Jacking in",
+    "Routing neon",
+    "Tracing threads",
+    "Spinning shards",
+    "Booting the rig",
+    "Finding signal",
+    "Lining up moves",
+    "Tuning the loop",
+    "Spinning up ICE",
+    "Piercing the firewall",
+    "Tracing packets",
+    "Decrypting payload",
+    "Cracking the cipher",
+    "Burning through logs",
+    "Reading the datastream",
+    "Scraping the grid",
+    "Patching chrome",
+    "Hot-swapping modules",
+    "Soldering the deck",
+    "Tuning latency",
+    "Overclocking thoughts",
+    "Rewiring the bus",
+    "Chasing the trace",
+    "Pulling source maps",
+    "Following the signal",
+    "Cutting through noise",
+    "Sandboxing the blast",
+    "Ghosting the edges",
+    "Spoofing the route",
+    "Spooling fiber",
+    "Rerouting the mesh",
+    "Syncing the stack",
+    "Aligning the optics",
+    "Buffering context",
+    "Stitching the patch",
+    "Checking the ICE wall",
+    "Clearing the cache",
+    "Spinning up a daemon",
+    "Rolling back drift",
+    "Dialing the gain",
+    "Calibrating the HUD",
+    "Running a trace",
+    "Probing endpoints",
+    "Greasing the gears",
+    "Loading a shard",
+    "Dropping a pin",
+    "Mapping the net",
+    "Reading the blackbox",
+    "Cutting a clean line",
+    "Locking the channel",
+    "Watching the pulse",
+    "Hunting the glitch",
+    "Writing the playbook",
+    "Counting cycles",
+    "Wiring the last mile",
+    "Taming the noise",
+    "Shipping the patch",
+];
+
+const THINKING_NOTES_MATRIX: &[&str] = &[
+    "Working",
+    "Following the rabbit",
+    "Reading the code",
+    "Decrypting",
+    "Connecting nodes",
+    "Finding the seam",
+    "Tracing the source",
+    "Scanning for glitches",
+    "Compiling reality",
+    "Reading the green rain",
+    "Dodging Agents",
+    "Finding the backdoor",
+    "Looking for deja vu",
+    "Checking the glitch",
+    "Bending the rules",
+    "Loading the program",
+    "Unpacking the construct",
+    "Rewriting the script",
+    "Mapping the maze",
+    "Choosing the door",
+    "Following the breadcrumbs",
+    "Tracing the phone line",
+    "Listening for the dial tone",
+    "Splicing the feed",
+    "Cutting the static",
+    "Watching the frames",
+    "Checking the mirror",
+    "Reading the oracle notes",
+    "Finding the exit",
+    "Jumping rooftops",
+    "Running the simulation",
+    "Debugging the matrix",
+    "Searching for an anomaly",
+    "Stitching the timeline",
+    "Anchoring reality",
+    "Dropping into the construct",
+    "Pulling the thread",
+    "Checking the reload",
+    "Clearing the buffer",
+    "Spinning up the construct",
+    "Aligning the code",
+    "Following the graph",
+    "Reading the signs",
+    "Looking for the crack",
+    "Waiting for the call",
+    "Finding the payphone",
+    "Re-entering the construct",
+    "Back in the chair",
+    "Making the jump",
+    "Bypassing the guard",
+    "Checking the hallway",
+    "Tightening the loop",
+    "Looking for the exploit",
+    "Closing the loop",
+    "Waking up",
+    "Staying frosty",
+    "Running the trace",
+    "Smoothing the edges",
+    "Compiling the answer",
+    "Watching for Agents",
+    "Breaking the pattern",
+];
+
+fn thinking_notes_for_theme(theme: TuiTheme) -> &'static [&'static str] {
+    match theme {
+        TuiTheme::Default => THINKING_NOTES_DEFAULT,
+        TuiTheme::Fallout => THINKING_NOTES_FALLOUT,
+        TuiTheme::Cyberpunk => THINKING_NOTES_CYBERPUNK,
+        TuiTheme::Matrix => THINKING_NOTES_MATRIX,
+    }
+}
 
 // Extract the first bold (Markdown) element in the form **...** from `s`.
 // Returns the inner text if found; otherwise `None`.

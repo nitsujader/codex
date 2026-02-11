@@ -481,6 +481,8 @@ pub enum NotificationMethod {
     Auto,
     Osc9,
     Bel,
+    #[serde(rename = "windows_toast")]
+    WindowsToast,
 }
 
 impl fmt::Display for NotificationMethod {
@@ -489,6 +491,28 @@ impl fmt::Display for NotificationMethod {
             NotificationMethod::Auto => write!(f, "auto"),
             NotificationMethod::Osc9 => write!(f, "osc9"),
             NotificationMethod::Bel => write!(f, "bel"),
+            NotificationMethod::WindowsToast => write!(f, "windows_toast"),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum TuiTheme {
+    #[default]
+    Default,
+    Fallout,
+    Cyberpunk,
+    Matrix,
+}
+
+impl fmt::Display for TuiTheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TuiTheme::Default => write!(f, "default"),
+            TuiTheme::Fallout => write!(f, "fallout"),
+            TuiTheme::Cyberpunk => write!(f, "cyberpunk"),
+            TuiTheme::Matrix => write!(f, "matrix"),
         }
     }
 }
@@ -506,6 +530,11 @@ pub struct Tui {
     /// Defaults to `auto`.
     #[serde(default)]
     pub notification_method: NotificationMethod,
+
+    /// Visual theme preset for the TUI.
+    /// Defaults to `default`.
+    #[serde(default)]
+    pub theme: TuiTheme,
 
     /// Enable animations (welcome screen, shimmer effects, spinners).
     /// Defaults to `true`.
@@ -538,6 +567,14 @@ pub struct Tui {
     /// When set, the TUI renders the selected items as the status line.
     #[serde(default)]
     pub status_line: Option<Vec<String>>,
+
+    /// Stream a Markdown transcript for the active thread to a stable file under
+    /// `CODEX_HOME/exports/live-<threadId>.md`.
+    ///
+    /// This is updated opportunistically after each turn completes.
+    /// Defaults to `false`.
+    #[serde(default)]
+    pub stream_markdown_transcript: bool,
 }
 
 const fn default_true() -> bool {
