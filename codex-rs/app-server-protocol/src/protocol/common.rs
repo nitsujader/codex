@@ -235,6 +235,54 @@ client_request_definitions! {
         params: v2::ThreadReadParams,
         response: v2::ThreadReadResponse,
     },
+    ThreadGetPinnedPrompt => "thread/getPinnedPrompt" {
+        params: v2::ThreadGetPinnedPromptParams,
+        response: v2::ThreadGetPinnedPromptResponse,
+    },
+    ThreadSetPinnedPrompt => "thread/setPinnedPrompt" {
+        params: v2::ThreadSetPinnedPromptParams,
+        response: v2::ThreadSetPinnedPromptResponse,
+    },
+    ThreadExportMarkdown => "thread/exportMarkdown" {
+        params: v2::ThreadExportMarkdownParams,
+        response: v2::ThreadExportMarkdownResponse,
+    },
+    HubStatus => "hub/status" {
+        params: v2::HubStatusParams,
+        response: v2::HubStatusResponse,
+    },
+    HubConfigureLan => "hub/configureLan" {
+        params: v2::HubConfigureLanParams,
+        response: v2::HubConfigureLanResponse,
+    },
+    PairStart => "pair/start" {
+        params: v2::PairStartParams,
+        response: v2::PairStartResponse,
+    },
+    PairComplete => "pair/complete" {
+        params: v2::PairCompleteParams,
+        response: v2::PairCompleteResponse,
+    },
+    DeviceList => "device/list" {
+        params: v2::DeviceListParams,
+        response: v2::DeviceListResponse,
+    },
+    DeviceRevoke => "device/revoke" {
+        params: v2::DeviceRevokeParams,
+        response: v2::DeviceRevokeResponse,
+    },
+    CaptureScreenshot => "capture/screenshot" {
+        params: v2::CaptureScreenshotParams,
+        response: v2::CaptureScreenshotResponse,
+    },
+    AssetUploadClipboardImage => "asset/uploadClipboardImage" {
+        params: v2::AssetUploadClipboardImageParams,
+        response: v2::AssetUploadClipboardImageResponse,
+    },
+    AgentInterrupt => "agent/interrupt" {
+        params: v2::AgentInterruptParams,
+        response: v2::AgentInterruptResponse,
+    },
     SkillsList => "skills/list" {
         params: v2::SkillsListParams,
         response: v2::SkillsListResponse,
@@ -707,7 +755,11 @@ server_notification_definitions! {
     Error => "error" (v2::ErrorNotification),
     ThreadStarted => "thread/started" (v2::ThreadStartedNotification),
     ThreadNameUpdated => "thread/name/updated" (v2::ThreadNameUpdatedNotification),
+    ThreadPinnedPromptUpdated => "thread/pinnedPromptUpdated" (v2::ThreadPinnedPromptUpdatedNotification),
     ThreadTokenUsageUpdated => "thread/tokenUsage/updated" (v2::ThreadTokenUsageUpdatedNotification),
+    AgentUpdated => "agent/updated" (v2::AgentUpdatedNotification),
+    StreamUpdated => "stream/updated" (v2::StreamUpdatedNotification),
+    DevicePairingRequested => "device/pairingRequested" (v2::DevicePairingRequestedNotification),
     TurnStarted => "turn/started" (v2::TurnStartedNotification),
     TurnCompleted => "turn/completed" (v2::TurnCompletedNotification),
     TurnDiffUpdated => "turn/diff/updated" (v2::TurnDiffUpdatedNotification),

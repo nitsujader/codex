@@ -731,6 +731,294 @@
             },
             "method": {
               "enum": [
+                "thread/getPinnedPrompt"
+              ],
+              "title": "Thread/getPinnedPromptRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/ThreadGetPinnedPromptParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Thread/getPinnedPromptRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "thread/setPinnedPrompt"
+              ],
+              "title": "Thread/setPinnedPromptRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/ThreadSetPinnedPromptParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Thread/setPinnedPromptRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "thread/exportMarkdown"
+              ],
+              "title": "Thread/exportMarkdownRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/ThreadExportMarkdownParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Thread/exportMarkdownRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "hub/status"
+              ],
+              "title": "Hub/statusRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/HubStatusParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Hub/statusRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "hub/configureLan"
+              ],
+              "title": "Hub/configureLanRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/HubConfigureLanParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Hub/configureLanRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "pair/start"
+              ],
+              "title": "Pair/startRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/PairStartParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Pair/startRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "pair/complete"
+              ],
+              "title": "Pair/completeRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/PairCompleteParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Pair/completeRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "device/list"
+              ],
+              "title": "Device/listRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/DeviceListParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Device/listRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "device/revoke"
+              ],
+              "title": "Device/revokeRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/DeviceRevokeParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Device/revokeRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "capture/screenshot"
+              ],
+              "title": "Capture/screenshotRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/CaptureScreenshotParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Capture/screenshotRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "asset/uploadClipboardImage"
+              ],
+              "title": "Asset/uploadClipboardImageRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/AssetUploadClipboardImageParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Asset/uploadClipboardImageRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
+                "agent/interrupt"
+              ],
+              "title": "Agent/interruptRequestMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/AgentInterruptParams"
+            }
+          },
+          "required": [
+            "id",
+            "method",
+            "params"
+          ],
+          "title": "Agent/interruptRequest",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "method": {
+              "enum": [
                 "skills/list"
               ],
               "title": "Skills/listRequestMethod",
@@ -7907,6 +8195,26 @@
           "properties": {
             "method": {
               "enum": [
+                "thread/pinnedPromptUpdated"
+              ],
+              "title": "Thread/pinnedPromptUpdatedNotificationMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/ThreadPinnedPromptUpdatedNotification"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "title": "Thread/pinnedPromptUpdatedNotification",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
                 "thread/tokenUsage/updated"
               ],
               "title": "Thread/tokenUsage/updatedNotificationMethod",
@@ -7921,6 +8229,66 @@
             "params"
           ],
           "title": "Thread/tokenUsage/updatedNotification",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "agent/updated"
+              ],
+              "title": "Agent/updatedNotificationMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/AgentUpdatedNotification"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "title": "Agent/updatedNotification",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "stream/updated"
+              ],
+              "title": "Stream/updatedNotificationMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/StreamUpdatedNotification"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "title": "Stream/updatedNotification",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "device/pairingRequested"
+              ],
+              "title": "Device/pairingRequestedNotificationMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/DevicePairingRequestedNotification"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "title": "Device/pairingRequestedNotification",
           "type": "object"
         },
         {
@@ -9993,6 +10361,30 @@
         "title": "AccountUpdatedNotification",
         "type": "object"
       },
+      "AgentInterruptParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "threadId"
+        ],
+        "title": "AgentInterruptParams",
+        "type": "object"
+      },
+      "AgentInterruptResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "AgentInterruptResponse",
+        "type": "object"
+      },
       "AgentMessageDeltaNotification": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
@@ -10016,6 +10408,33 @@
           "turnId"
         ],
         "title": "AgentMessageDeltaNotification",
+        "type": "object"
+      },
+      "AgentUpdatedNotification": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentId",
+          "status",
+          "threadId"
+        ],
+        "title": "AgentUpdatedNotification",
         "type": "object"
       },
       "AnalyticsConfig": {
@@ -10194,6 +10613,42 @@
         ],
         "type": "string"
       },
+      "AssetUploadClipboardImageParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "fileName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "imageBase64": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "title": "AssetUploadClipboardImageParams",
+        "type": "object"
+      },
+      "AssetUploadClipboardImageResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "assetId",
+          "path"
+        ],
+        "title": "AssetUploadClipboardImageResponse",
+        "type": "object"
+      },
       "AuthMode": {
         "description": "Authentication mode for OpenAI-backed providers.",
         "oneOf": [
@@ -10271,6 +10726,32 @@
           "notFound"
         ],
         "type": "string"
+      },
+      "CaptureScreenshotParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "outputPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "title": "CaptureScreenshotParams",
+        "type": "object"
+      },
+      "CaptureScreenshotResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "CaptureScreenshotResponse",
+        "type": "object"
       },
       "CodexErrorInfo": {
         "description": "This translation layer make sure that we expose codex error code in camel case.\n\nWhen an upstream HTTP status is available (for example, from the Responses API or a provider), it is forwarded in `httpStatusCode` on the relevant `codexErrorInfo` variant.",
@@ -11485,6 +11966,93 @@
         "title": "DeprecationNoticeNotification",
         "type": "object"
       },
+      "DeviceListParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "title": "DeviceListParams",
+        "type": "object"
+      },
+      "DeviceListResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/definitions/v2/HubDevice"
+            },
+            "type": "array"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DeviceListResponse",
+        "type": "object"
+      },
+      "DevicePairingRequestedNotification": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "expiresAt"
+        ],
+        "title": "DevicePairingRequestedNotification",
+        "type": "object"
+      },
+      "DeviceRevokeParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId"
+        ],
+        "title": "DeviceRevokeParams",
+        "type": "object"
+      },
+      "DeviceRevokeResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "revoked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "revoked"
+        ],
+        "title": "DeviceRevokeResponse",
+        "type": "object"
+      },
       "DynamicToolSpec": {
         "properties": {
           "description": {
@@ -11949,6 +12517,148 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "HubConfigureLanParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "bindHost": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bindPort": {
+            "format": "uint16",
+            "minimum": 0.0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HubConfigureLanParams",
+        "type": "object"
+      },
+      "HubConfigureLanResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "bindHost": {
+            "type": "string"
+          },
+          "bindPort": {
+            "format": "uint16",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bindHost",
+          "bindPort",
+          "enabled"
+        ],
+        "title": "HubConfigureLanResponse",
+        "type": "object"
+      },
+      "HubDevice": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "deviceName": {
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "pairedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "role": {
+            "$ref": "#/definitions/v2/HubDeviceRole"
+          }
+        },
+        "required": [
+          "deviceId",
+          "deviceName",
+          "lastSeenAt",
+          "pairedAt",
+          "role"
+        ],
+        "type": "object"
+      },
+      "HubDeviceRole": {
+        "enum": [
+          "observer",
+          "operator",
+          "promptOnly"
+        ],
+        "type": "string"
+      },
+      "HubStatusParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "HubStatusParams",
+        "type": "object"
+      },
+      "HubStatusResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "deviceCount": {
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "endpoint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lanEnabled": {
+            "type": "boolean"
+          },
+          "pid": {
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "running": {
+            "type": "boolean"
+          },
+          "startedAt": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "deviceCount",
+          "lanEnabled",
+          "running"
+        ],
+        "title": "HubStatusResponse",
         "type": "object"
       },
       "InputModality": {
@@ -12676,6 +13386,67 @@
           "message",
           "overridingLayer"
         ],
+        "type": "object"
+      },
+      "PairCompleteParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "deviceName": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/definitions/v2/HubDeviceRole"
+          }
+        },
+        "required": [
+          "code",
+          "deviceName",
+          "role"
+        ],
+        "title": "PairCompleteParams",
+        "type": "object"
+      },
+      "PairCompleteResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "device": {
+            "$ref": "#/definitions/v2/HubDevice"
+          },
+          "deviceToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "deviceToken"
+        ],
+        "title": "PairCompleteResponse",
+        "type": "object"
+      },
+      "PairStartParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "PairStartParams",
+        "type": "object"
+      },
+      "PairStartResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "expiresAt"
+        ],
+        "title": "PairStartResponse",
         "type": "object"
       },
       "PatchApplyStatus": {
@@ -14314,6 +15085,28 @@
         "title": "SkillsRemoteWriteResponse",
         "type": "object"
       },
+      "StreamUpdatedNotification": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "streamPath": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "streamPath",
+          "threadId",
+          "updatedAt"
+        ],
+        "title": "StreamUpdatedNotification",
+        "type": "object"
+      },
       "SubAgentSource": {
         "oneOf": [
           {
@@ -14566,6 +15359,82 @@
         "title": "ThreadCompactStartResponse",
         "type": "object"
       },
+      "ThreadExportMarkdownParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "includeReasoningSummaries": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "includeTokenUsage": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "includeToolIo": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "includeTurnContext": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "outputPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recentReviewMessages": {
+            "format": "uint",
+            "minimum": 0.0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "redactSecrets": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "threadId"
+        ],
+        "title": "ThreadExportMarkdownParams",
+        "type": "object"
+      },
+      "ThreadExportMarkdownResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "markdown": {
+            "type": "string"
+          },
+          "outputPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "markdown"
+        ],
+        "title": "ThreadExportMarkdownResponse",
+        "type": "object"
+      },
       "ThreadForkParams": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "description": "There are two ways to fork a thread: 1. By thread_id: load the thread from disk by thread_id and fork it into a new thread. 2. By path: load the thread from disk by path and fork it into a new thread.\n\nIf using path, the thread_id param will be ignored.\n\nPrefer using thread_id whenever possible.",
@@ -14679,6 +15548,32 @@
           "thread"
         ],
         "title": "ThreadForkResponse",
+        "type": "object"
+      },
+      "ThreadGetPinnedPromptParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "threadId"
+        ],
+        "title": "ThreadGetPinnedPromptParams",
+        "type": "object"
+      },
+      "ThreadGetPinnedPromptResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "pinnedPrompt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "title": "ThreadGetPinnedPromptResponse",
         "type": "object"
       },
       "ThreadId": {
@@ -15306,6 +16201,30 @@
         "title": "ThreadNameUpdatedNotification",
         "type": "object"
       },
+      "ThreadPinnedPromptUpdatedNotification": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "pinnedPrompt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "threadId",
+          "updatedAt"
+        ],
+        "title": "ThreadPinnedPromptUpdatedNotification",
+        "type": "object"
+      },
       "ThreadReadParams": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
@@ -15520,6 +16439,30 @@
       "ThreadSetNameResponse": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "ThreadSetNameResponse",
+        "type": "object"
+      },
+      "ThreadSetPinnedPromptParams": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "pinnedPrompt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "threadId"
+        ],
+        "title": "ThreadSetPinnedPromptParams",
+        "type": "object"
+      },
+      "ThreadSetPinnedPromptResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "ThreadSetPinnedPromptResponse",
         "type": "object"
       },
       "ThreadSortKey": {

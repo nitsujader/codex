@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "streamPath": {
+      "type": "string"
+    },
+    "threadId": {
+      "type": "string"
+    },
+    "updatedAt": {
+      "format": "int64",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "streamPath",
+    "threadId",
+    "updatedAt"
+  ],
+  "title": "StreamUpdatedNotification",
+  "type": "object"
+}

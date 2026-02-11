@@ -165,6 +165,31 @@
         }
       ]
     },
+    "AgentUpdatedNotification": {
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "agentId",
+        "status",
+        "threadId"
+      ],
+      "type": "object"
+    },
     "AppInfo": {
       "description": "EXPERIMENTAL - app metadata returned by app-list APIs.",
       "properties": {
@@ -1044,6 +1069,22 @@
       },
       "required": [
         "summary"
+      ],
+      "type": "object"
+    },
+    "DevicePairingRequestedNotification": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "code",
+        "expiresAt"
       ],
       "type": "object"
     },
@@ -5883,6 +5924,26 @@
       ],
       "type": "string"
     },
+    "StreamUpdatedNotification": {
+      "properties": {
+        "streamPath": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "streamPath",
+        "threadId",
+        "updatedAt"
+      ],
+      "type": "object"
+    },
     "SubAgentSource": {
       "oneOf": [
         {
@@ -6609,6 +6670,28 @@
       },
       "required": [
         "threadId"
+      ],
+      "type": "object"
+    },
+    "ThreadPinnedPromptUpdatedNotification": {
+      "properties": {
+        "pinnedPrompt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "threadId",
+        "updatedAt"
       ],
       "type": "object"
     },
@@ -7681,6 +7764,26 @@
       "properties": {
         "method": {
           "enum": [
+            "thread/pinnedPromptUpdated"
+          ],
+          "title": "Thread/pinnedPromptUpdatedNotificationMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ThreadPinnedPromptUpdatedNotification"
+        }
+      },
+      "required": [
+        "method",
+        "params"
+      ],
+      "title": "Thread/pinnedPromptUpdatedNotification",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "method": {
+          "enum": [
             "thread/tokenUsage/updated"
           ],
           "title": "Thread/tokenUsage/updatedNotificationMethod",
@@ -7695,6 +7798,66 @@
         "params"
       ],
       "title": "Thread/tokenUsage/updatedNotification",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "method": {
+          "enum": [
+            "agent/updated"
+          ],
+          "title": "Agent/updatedNotificationMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/AgentUpdatedNotification"
+        }
+      },
+      "required": [
+        "method",
+        "params"
+      ],
+      "title": "Agent/updatedNotification",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "method": {
+          "enum": [
+            "stream/updated"
+          ],
+          "title": "Stream/updatedNotificationMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/StreamUpdatedNotification"
+        }
+      },
+      "required": [
+        "method",
+        "params"
+      ],
+      "title": "Stream/updatedNotification",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "method": {
+          "enum": [
+            "device/pairingRequested"
+          ],
+          "title": "Device/pairingRequestedNotificationMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/DevicePairingRequestedNotification"
+        }
+      },
+      "required": [
+        "method",
+        "params"
+      ],
+      "title": "Device/pairingRequestedNotification",
       "type": "object"
     },
     {

@@ -19,6 +19,7 @@ members = [
     "shell-command",
     "core",
     "hooks",
+    "hub",
     "secrets",
     "exec",
     "exec-server",
@@ -86,6 +87,7 @@ codex-common = { path = "common" }
 codex-shell-command = { path = "shell-command" }
 codex-core = { path = "core" }
 codex-hooks = { path = "hooks" }
+codex-hub = { path = "hub" }
 codex-secrets = { path = "secrets" }
 codex-exec = { path = "exec" }
 codex-execpolicy = { path = "execpolicy" }

@@ -1,0 +1,17 @@
+[package]
+name = "desktop-companion"
+version = "0.1.0"
+description = "Windows-first desktop companion scaffold"
+authors = ["Justin"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }
+
+[[bin]]
+name = "desktop-companion"
+path = "src/main.rs"

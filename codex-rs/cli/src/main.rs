@@ -35,10 +35,12 @@ use supports_color::Stream;
 mod app_cmd;
 #[cfg(target_os = "macos")]
 mod desktop_app;
+mod hub_cmd;
 mod mcp_cmd;
 #[cfg(not(windows))]
 mod wsl_paths;
 
+use crate::hub_cmd::HubCli;
 use crate::mcp_cmd::McpCli;
 
 use codex_core::config::Config;
@@ -101,6 +103,9 @@ enum Subcommand {
 
     /// [experimental] Run the app server or related tooling.
     AppServer(AppServerCommand),
+
+    /// [experimental] Run and manage the local Codex hub daemon.
+    Hub(HubCli),
 
     /// Launch the Codex desktop app (downloads the macOS installer if missing).
     #[cfg(target_os = "macos")]
@@ -613,6 +618,9 @@ async fn cli_main(codex_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()
                 )?;
             }
         },
+        Some(Subcommand::Hub(hub_cli)) => {
+            hub_cmd::run_hub_command(hub_cli).await?;
+        }
         #[cfg(target_os = "macos")]
         Some(Subcommand::App(app_cli)) => {
             app_cmd::run_app(app_cli).await?;
@@ -1104,6 +1112,14 @@ mod tests {
         app_server
     }
 
+    fn hub_from_args(args: &[&str]) -> HubCli {
+        let cli = MultitoolCli::try_parse_from(args).expect("parse");
+        let Subcommand::Hub(hub) = cli.subcommand.expect("hub present") else {
+            unreachable!()
+        };
+        hub
+    }
+
     fn sample_exit_info(conversation_id: Option<&str>, thread_name: Option<&str>) -> AppExitInfo {
         let token_usage = TokenUsage {
             output_tokens: 2,
@@ -1335,6 +1351,33 @@ mod tests {
         let app_server =
             app_server_from_args(["codex", "app-server", "--analytics-default-enabled"].as_ref());
         assert!(app_server.analytics_default_enabled);
+    }
+
+    #[test]
+    fn hub_start_parses_host_and_port() {
+        let hub = hub_from_args(
+            [
+                "codex",
+                "hub",
+                "start",
+                "--host",
+                "127.0.0.2",
+                "--port",
+                "9999",
+            ]
+            .as_ref(),
+        );
+        let crate::hub_cmd::HubSubcommand::Start(start) = hub.subcommand else {
+            panic!("expected hub start");
+        };
+        assert_eq!(start.host, "127.0.0.2");
+        assert_eq!(start.port, 9999);
+    }
+
+    #[test]
+    fn hub_pair_subcommand_parses() {
+        let hub = hub_from_args(["codex", "hub", "pair"].as_ref());
+        assert_matches!(hub.subcommand, crate::hub_cmd::HubSubcommand::Pair);
     }
 
     #[test]

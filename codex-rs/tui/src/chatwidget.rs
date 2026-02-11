@@ -480,9 +480,34 @@ struct ThinkingNoteDeck {
     theme: TuiTheme,
     remaining: Vec<&'static str>,
     last: Option<&'static str>,
+    recent: VecDeque<&'static str>,
+    recent_lookup: HashSet<&'static str>,
 }
 
 impl ThinkingNoteDeck {
+    fn effective_no_repeat_window(notes_len: usize) -> usize {
+        const THINKING_NOTE_NO_REPEAT_WINDOW: usize = 64;
+        THINKING_NOTE_NO_REPEAT_WINDOW.min(notes_len.saturating_sub(1))
+    }
+
+    fn record_note(&mut self, note: &'static str, notes_len: usize) {
+        let window = Self::effective_no_repeat_window(notes_len);
+        if window == 0 {
+            self.recent.clear();
+            self.recent_lookup.clear();
+            return;
+        }
+        self.recent.push_back(note);
+        self.recent_lookup.insert(note);
+        while self.recent.len() > window {
+            if let Some(evicted) = self.recent.pop_front()
+                && !self.recent.contains(&evicted)
+            {
+                self.recent_lookup.remove(evicted);
+            }
+        }
+    }
+
     fn next_for_theme(&mut self, theme: TuiTheme) -> String {
         let notes = thinking_notes_for_theme(theme);
         if cfg!(test) {
@@ -492,28 +517,58 @@ impl ThinkingNoteDeck {
 
         if self.remaining.is_empty() || self.theme != theme {
             self.theme = theme;
-            self.remaining = notes.to_vec();
             let mut rng = rand::rng();
-            self.remaining.shuffle(&mut rng);
-            // Avoid repeating the most recent note when the deck resets.
+            let mut shuffled = notes.to_vec();
+            shuffled.shuffle(&mut rng);
+            let window = Self::effective_no_repeat_window(notes.len());
+            if window == 0 {
+                self.remaining = shuffled;
+            } else {
+                let mut fresh = Vec::with_capacity(shuffled.len());
+                let mut stale = Vec::with_capacity(shuffled.len());
+                for note in shuffled {
+                    if self.recent_lookup.contains(note) {
+                        stale.push(note);
+                    } else {
+                        fresh.push(note);
+                    }
+                }
+                stale.extend(fresh);
+                self.remaining = stale;
+            }
             if let Some(last) = self.last
                 && self.remaining.len() > 1
                 && self.remaining.last().is_some_and(|note| *note == last)
             {
                 let last_idx = self.remaining.len() - 1;
-                self.remaining.swap(0, last_idx);
+                let swap_idx = last_idx - 1;
+                self.remaining.swap(swap_idx, last_idx);
             }
         }
 
         let mut note = self.remaining.pop().unwrap_or("Working");
-        // Avoid an immediate repeat if the list contains duplicate entries (or if the deck was
-        // seeded poorly).
         if Some(note) == self.last && !self.remaining.is_empty() {
             let alt = self.remaining.pop().unwrap_or(note);
             self.remaining.push(note);
             note = alt;
         }
+
+        let window = Self::effective_no_repeat_window(notes.len());
+        if window > 0
+            && self.recent_lookup.contains(note)
+            && self.recent_lookup.len() < notes.len()
+            && let Some(next_fresh_idx) = self
+                .remaining
+                .iter()
+                .rposition(|candidate| !self.recent_lookup.contains(*candidate))
+        {
+            let replacement = self.remaining.remove(next_fresh_idx);
+            self.remaining.push(note);
+            note = replacement;
+        }
+
         self.last = Some(note);
+        self.record_note(note, notes.len());
         note.to_string()
     }
 }
@@ -7352,6 +7407,44 @@ const THINKING_NOTES_DEFAULT: &[&str] = &[
     "Putting a bow on it",
     "Almost there",
     "Calibrating",
+    "Charting a cleaner orbit",
+    "Balancing throughput",
+    "Unwinding edge cases",
+    "Checking dimensional analysis",
+    "Counting invariants",
+    "Refactoring entropy away",
+    "Normalizing assumptions",
+    "Sharpening hypotheses",
+    "Proving a tiny theorem",
+    "Reducing state surface",
+    "Tuning the feedback loop",
+    "Squeezing latency",
+    "Picking stable primitives",
+    "Budgeting context tokens",
+    "Checking the blast radius",
+    "Fencing side effects",
+    "Tracing ownership",
+    "Factoring the equation",
+    "Guarding the happy path",
+    "Guarding the sad path",
+    "Measuring twice, patching once",
+    "Aligning with first principles",
+    "Running a null hypothesis",
+    "Reducing cognitive load",
+    "Searching for fixed points",
+    "Keeping the API honest",
+    "Writing for future me",
+    "Turning chaos into structure",
+    "Checking statistical significance",
+    "Conserving momentum",
+    "Resolving dependency knots",
+    "Picking deterministic paths",
+    "Inspecting hidden variables",
+    "Nailing down preconditions",
+    "Nailing down postconditions",
+    "Applying Occam's razor",
+    "Escaping local minima",
+    "Preparing the release vector",
 ];
 
 const THINKING_NOTES_FALLOUT: &[&str] = &[
@@ -7421,6 +7514,46 @@ const THINKING_NOTES_FALLOUT: &[&str] = &[
     "Setting the dial",
     "Running diagnostics",
     "Back to the drawing board",
+    "Kicking dust off the keyboard",
+    "Counting geiger clicks",
+    "Tapping the vault terminal",
+    "Reading an old terminal log",
+    "Stitching a leather patch",
+    "Hammering a bent bracket",
+    "Balancing power cells",
+    "Scrapping for copper wire",
+    "Polishing a vault-tec badge",
+    "Checking fusion core output",
+    "Hunting for clean circuitry",
+    "Trading at the outpost",
+    "Rerouting coolant lines",
+    "Fortifying the barricade",
+    "Dialing in the long-range radio",
+    "Testing the perimeter lights",
+    "Checking weathered schematics",
+    "Tuning servos on the bench",
+    "Patching a cracked visor",
+    "Mapping hostile terrain",
+    "Marking danger zones",
+    "Bolting down the worktable",
+    "Cleaning carbon buildup",
+    "Reinforcing the frame",
+    "Running a vault simulation",
+    "Watching for super mutants",
+    "Setting a safer route",
+    "Loading another magazine",
+    "Rebuilding from spare parts",
+    "Sealing the airlock",
+    "Resetting the turret logic",
+    "Securing the supply line",
+    "Logging findings in the Pip-Boy",
+    "Tuning the reactor hum",
+    "Bracing for aftershocks",
+    "Packing a rad-away backup",
+    "Adjusting power armor seals",
+    "Surveying the horizon",
+    "Checking the bunker map",
+    "Calling in a caravan",
 ];
 
 const THINKING_NOTES_CYBERPUNK: &[&str] = &[
@@ -7482,6 +7615,46 @@ const THINKING_NOTES_CYBERPUNK: &[&str] = &[
     "Wiring the last mile",
     "Taming the noise",
     "Shipping the patch",
+    "Splicing quantum fiber",
+    "Threading through back alleys",
+    "Tuning the city uplink",
+    "Sniffing packet ghosts",
+    "Escaping black ICE",
+    "Flashing fresh firmware",
+    "Stabilizing the implant bus",
+    "Riding the data rail",
+    "Locking in clean telemetry",
+    "Compiling neon diagnostics",
+    "Refining threat signatures",
+    "Patching kernel seams",
+    "Defragging memory lanes",
+    "Pinging the night market",
+    "Bootstrapping a sidecar",
+    "Hardening the perimeter node",
+    "Running covert benchmarks",
+    "Checking drone chatter",
+    "Signing the payload",
+    "Masking trace residue",
+    "Sandboxing rogue scripts",
+    "Dialing stealth mode",
+    "Triangulating the anomaly",
+    "Shimming compatibility layers",
+    "Balancing thermal headroom",
+    "Rekeying secure tunnels",
+    "Vectoring around watchdogs",
+    "Replaying forensic traces",
+    "Warming cold caches",
+    "Pinning reproducible builds",
+    "Encrypting the breadcrumb trail",
+    "Kicking off a clean deploy",
+    "Gluing the final segment",
+    "Watching the skyline packets",
+    "Maintaining opsec",
+    "Escorting the data convoy",
+    "Charging the neural deck",
+    "Scrubbing metadata fingerprints",
+    "Turning static into signal",
+    "Keeping the chrome humming",
 ];
 
 const THINKING_NOTES_MATRIX: &[&str] = &[
@@ -7546,6 +7719,46 @@ const THINKING_NOTES_MATRIX: &[&str] = &[
     "Compiling the answer",
     "Watching for Agents",
     "Breaking the pattern",
+    "Interrogating the residual self-image",
+    "Shifting the probability field",
+    "Syncing with Zion uplink",
+    "Watching the code cascade",
+    "Tracing sentinel paths",
+    "Recompiling the construct",
+    "Locking onto source vectors",
+    "Filtering simulation noise",
+    "Inspecting causal loops",
+    "Sliding between keyframes",
+    "Watching causality jitter",
+    "Threading the impossible path",
+    "Measuring simulation drift",
+    "Predicting agent movement",
+    "Finding another loophole",
+    "Rebalancing the equation",
+    "Reconstructing missing frames",
+    "Scanning the skyline matrix",
+    "Preparing an exit protocol",
+    "Checking residual echoes",
+    "Calibrating the jump program",
+    "Rekeying operator channels",
+    "Following paradox breadcrumbs",
+    "Decoding the train schedule",
+    "Entering bullet-time math",
+    "Reading the machine room logs",
+    "Mapping hidden corridors",
+    "Tapping the rooftop relay",
+    "Syncing with the Nebuchadnezzar",
+    "Breaking another loop",
+    "Keeping the signal clean",
+    "Protecting the keymaker route",
+    "Picking the safer timeline",
+    "Watching the anomaly settle",
+    "Debugging causality",
+    "Finding one more backdoor",
+    "Holding the line",
+    "Rechecking the prophecy",
+    "Committing to the choice",
+    "Escaping the deterministic branch",
 ];
 
 fn thinking_notes_for_theme(theme: TuiTheme) -> &'static [&'static str] {

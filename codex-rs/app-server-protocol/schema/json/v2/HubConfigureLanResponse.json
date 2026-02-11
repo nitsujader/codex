@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "bindHost": {
+      "type": "string"
+    },
+    "bindPort": {
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "enabled": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "bindHost",
+    "bindPort",
+    "enabled"
+  ],
+  "title": "HubConfigureLanResponse",
+  "type": "object"
+}

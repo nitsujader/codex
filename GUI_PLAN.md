@@ -24,6 +24,16 @@ Scope includes:
   - Platform-first architecture, plugin extensibility, long-lived action system.
   - Windows build/runtime discipline and predictable tooling conventions.
 
+## Execution Tooling Policy
+- This plan is implementation-tool agnostic and does not assume Claude usage.
+- Subagents and Codex CLI are encouraged where they reduce risk or speed up delivery.
+
+## Implementation Status
+- In progress.
+- Landed foundation milestone:
+  - New `codex-hub` crate with local daemon lifecycle and control endpoints.
+  - New CLI surface: `codex hub start|stop|status|pair`.
+
 ---
 
 ## 1) GUI Stack Decision Matrix

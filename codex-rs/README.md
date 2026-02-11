@@ -48,6 +48,19 @@ Use `codex mcp` to add/list/get/remove MCP server launchers defined in `config.t
 
 You can enable notifications by configuring a script that is run whenever the agent finishes a turn. The [notify documentation](../docs/config.md#notify) includes a detailed example that explains how to get desktop notifications via [terminal-notifier](https://github.com/julienXX/terminal-notifier) on macOS. When Codex detects that it is running under WSL 2 inside Windows Terminal (`WT_SESSION` is set), the TUI automatically falls back to native Windows toast notifications so approval prompts and completed turns surface even though Windows Terminal does not implement OSC 9.
 
+### Hub daemon (experimental)
+
+Codex now includes an experimental local hub daemon intended as the runtime foundation for companion GUI/mobile clients.
+
+```shell
+codex hub start
+codex hub status
+codex hub pair
+codex hub stop
+```
+
+`codex hub pair` returns a short-lived pairing code that future companion clients can use during local-network enrollment.
+
 ### `codex exec` to run Codex programmatically/non-interactively
 
 To run Codex non-interactively, run `codex exec PROMPT` (you can also pass the prompt via `stdin`) and Codex will work on your task until it decides that it is done and exits. Output is printed to the terminal directly. You can set the `RUST_LOG` environment variable to see more about what's going on.

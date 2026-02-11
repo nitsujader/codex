@@ -5,6 +5,7 @@ use crate::fuzzy_file_search::run_fuzzy_file_search;
 use crate::models::supported_models;
 use crate::outgoing_message::OutgoingMessageSender;
 use crate::outgoing_message::OutgoingNotification;
+use base64::Engine as _;
 use chrono::DateTime;
 use chrono::SecondsFormat;
 use chrono::Utc;
@@ -13,6 +14,9 @@ use codex_app_server_protocol::AccountLoginCompletedNotification;
 use codex_app_server_protocol::AccountUpdatedNotification;
 use codex_app_server_protocol::AddConversationListenerParams;
 use codex_app_server_protocol::AddConversationSubscriptionResponse;
+use codex_app_server_protocol::AgentInterruptParams;
+use codex_app_server_protocol::AgentInterruptResponse;
+use codex_app_server_protocol::AgentUpdatedNotification;
 use codex_app_server_protocol::AppInfo;
 use codex_app_server_protocol::AppListUpdatedNotification;
 use codex_app_server_protocol::AppsListParams;
@@ -20,18 +24,27 @@ use codex_app_server_protocol::AppsListResponse;
 use codex_app_server_protocol::ArchiveConversationParams;
 use codex_app_server_protocol::ArchiveConversationResponse;
 use codex_app_server_protocol::AskForApproval;
+use codex_app_server_protocol::AssetUploadClipboardImageParams;
+use codex_app_server_protocol::AssetUploadClipboardImageResponse;
 use codex_app_server_protocol::AuthMode;
 use codex_app_server_protocol::AuthStatusChangeNotification;
 use codex_app_server_protocol::CancelLoginAccountParams;
 use codex_app_server_protocol::CancelLoginAccountResponse;
 use codex_app_server_protocol::CancelLoginAccountStatus;
 use codex_app_server_protocol::CancelLoginChatGptResponse;
+use codex_app_server_protocol::CaptureScreenshotParams;
+use codex_app_server_protocol::CaptureScreenshotResponse;
 use codex_app_server_protocol::ClientRequest;
 use codex_app_server_protocol::CollaborationModeListParams;
 use codex_app_server_protocol::CollaborationModeListResponse;
 use codex_app_server_protocol::CommandExecParams;
 use codex_app_server_protocol::ConversationGitInfo;
 use codex_app_server_protocol::ConversationSummary;
+use codex_app_server_protocol::DeviceListParams;
+use codex_app_server_protocol::DeviceListResponse;
+use codex_app_server_protocol::DevicePairingRequestedNotification;
+use codex_app_server_protocol::DeviceRevokeParams;
+use codex_app_server_protocol::DeviceRevokeResponse;
 use codex_app_server_protocol::DynamicToolSpec as ApiDynamicToolSpec;
 use codex_app_server_protocol::ExecOneOffCommandResponse;
 use codex_app_server_protocol::ExperimentalFeature as ApiExperimentalFeature;
@@ -55,6 +68,11 @@ use codex_app_server_protocol::GetUserAgentResponse;
 use codex_app_server_protocol::GetUserSavedConfigResponse;
 use codex_app_server_protocol::GitDiffToRemoteResponse;
 use codex_app_server_protocol::GitInfo as ApiGitInfo;
+use codex_app_server_protocol::HubConfigureLanParams;
+use codex_app_server_protocol::HubConfigureLanResponse;
+use codex_app_server_protocol::HubDeviceRole;
+use codex_app_server_protocol::HubStatusParams;
+use codex_app_server_protocol::HubStatusResponse;
 use codex_app_server_protocol::InputItem as WireInputItem;
 use codex_app_server_protocol::InterruptConversationParams;
 use codex_app_server_protocol::JSONRPCErrorError;
@@ -81,6 +99,10 @@ use codex_app_server_protocol::ModelListParams;
 use codex_app_server_protocol::ModelListResponse;
 use codex_app_server_protocol::NewConversationParams;
 use codex_app_server_protocol::NewConversationResponse;
+use codex_app_server_protocol::PairCompleteParams;
+use codex_app_server_protocol::PairCompleteResponse;
+use codex_app_server_protocol::PairStartParams;
+use codex_app_server_protocol::PairStartResponse;
 use codex_app_server_protocol::RemoveConversationListenerParams;
 use codex_app_server_protocol::RemoveConversationSubscriptionResponse;
 use codex_app_server_protocol::RequestId;
@@ -107,6 +129,7 @@ use codex_app_server_protocol::SkillsRemoteReadParams;
 use codex_app_server_protocol::SkillsRemoteReadResponse;
 use codex_app_server_protocol::SkillsRemoteWriteParams;
 use codex_app_server_protocol::SkillsRemoteWriteResponse;
+use codex_app_server_protocol::StreamUpdatedNotification;
 use codex_app_server_protocol::Thread;
 use codex_app_server_protocol::ThreadArchiveParams;
 use codex_app_server_protocol::ThreadArchiveResponse;
@@ -114,13 +137,18 @@ use codex_app_server_protocol::ThreadBackgroundTerminalsCleanParams;
 use codex_app_server_protocol::ThreadBackgroundTerminalsCleanResponse;
 use codex_app_server_protocol::ThreadCompactStartParams;
 use codex_app_server_protocol::ThreadCompactStartResponse;
+use codex_app_server_protocol::ThreadExportMarkdownParams;
+use codex_app_server_protocol::ThreadExportMarkdownResponse;
 use codex_app_server_protocol::ThreadForkParams;
 use codex_app_server_protocol::ThreadForkResponse;
+use codex_app_server_protocol::ThreadGetPinnedPromptParams;
+use codex_app_server_protocol::ThreadGetPinnedPromptResponse;
 use codex_app_server_protocol::ThreadItem;
 use codex_app_server_protocol::ThreadListParams;
 use codex_app_server_protocol::ThreadListResponse;
 use codex_app_server_protocol::ThreadLoadedListParams;
 use codex_app_server_protocol::ThreadLoadedListResponse;
+use codex_app_server_protocol::ThreadPinnedPromptUpdatedNotification;
 use codex_app_server_protocol::ThreadReadParams;
 use codex_app_server_protocol::ThreadReadResponse;
 use codex_app_server_protocol::ThreadResumeParams;
@@ -128,6 +156,8 @@ use codex_app_server_protocol::ThreadResumeResponse;
 use codex_app_server_protocol::ThreadRollbackParams;
 use codex_app_server_protocol::ThreadSetNameParams;
 use codex_app_server_protocol::ThreadSetNameResponse;
+use codex_app_server_protocol::ThreadSetPinnedPromptParams;
+use codex_app_server_protocol::ThreadSetPinnedPromptResponse;
 use codex_app_server_protocol::ThreadSortKey;
 use codex_app_server_protocol::ThreadSourceKind;
 use codex_app_server_protocol::ThreadStartParams;
@@ -179,6 +209,8 @@ use codex_core::default_client::set_default_client_residency_requirement;
 use codex_core::error::CodexErr;
 use codex_core::exec::ExecParams;
 use codex_core::exec_env::create_env;
+use codex_core::export_markdown::ExportMarkdownOptions;
+use codex_core::export_markdown::export_rollout_to_markdown;
 use codex_core::features::FEATURES;
 use codex_core::features::Feature;
 use codex_core::features::Stage;
@@ -204,6 +236,7 @@ use codex_core::state_db::StateDbHandle;
 use codex_core::state_db::get_state_db;
 use codex_core::windows_sandbox::WindowsSandboxLevelExt;
 use codex_feedback::CodexFeedback;
+use codex_hub::DeviceRole as HubRole;
 use codex_login::ServerOptions as LoginServerOptions;
 use codex_login::ShutdownHandle;
 use codex_login::run_login_server;
@@ -528,6 +561,42 @@ impl CodexMessageProcessor {
             }
             ClientRequest::ThreadRead { request_id, params } => {
                 self.thread_read(request_id, params).await;
+            }
+            ClientRequest::ThreadGetPinnedPrompt { request_id, params } => {
+                self.thread_get_pinned_prompt(request_id, params).await;
+            }
+            ClientRequest::ThreadSetPinnedPrompt { request_id, params } => {
+                self.thread_set_pinned_prompt(request_id, params).await;
+            }
+            ClientRequest::ThreadExportMarkdown { request_id, params } => {
+                self.thread_export_markdown(request_id, params).await;
+            }
+            ClientRequest::HubStatus { request_id, params } => {
+                self.hub_status(request_id, params).await;
+            }
+            ClientRequest::HubConfigureLan { request_id, params } => {
+                self.hub_configure_lan(request_id, params).await;
+            }
+            ClientRequest::PairStart { request_id, params } => {
+                self.pair_start(request_id, params).await;
+            }
+            ClientRequest::PairComplete { request_id, params } => {
+                self.pair_complete(request_id, params).await;
+            }
+            ClientRequest::DeviceList { request_id, params } => {
+                self.device_list(request_id, params).await;
+            }
+            ClientRequest::DeviceRevoke { request_id, params } => {
+                self.device_revoke(request_id, params).await;
+            }
+            ClientRequest::CaptureScreenshot { request_id, params } => {
+                self.capture_screenshot(request_id, params).await;
+            }
+            ClientRequest::AssetUploadClipboardImage { request_id, params } => {
+                self.asset_upload_clipboard_image(request_id, params).await;
+            }
+            ClientRequest::AgentInterrupt { request_id, params } => {
+                self.agent_interrupt(request_id, params).await;
             }
             ClientRequest::SkillsList { request_id, params } => {
                 self.skills_list(request_id, params).await;
@@ -2516,6 +2585,564 @@ impl CodexMessageProcessor {
 
         let response = ThreadReadResponse { thread };
         self.outgoing.send_response(request_id, response).await;
+    }
+
+    async fn thread_get_pinned_prompt(
+        &mut self,
+        request_id: RequestId,
+        params: ThreadGetPinnedPromptParams,
+    ) {
+        let result =
+            codex_hub::get_pinned_prompt(&self.config.codex_home, params.thread_id.as_str()).await;
+        match result {
+            Ok(pinned_prompt) => {
+                self.outgoing
+                    .send_response(request_id, ThreadGetPinnedPromptResponse { pinned_prompt })
+                    .await;
+            }
+            Err(err) => {
+                self.send_internal_error(
+                    request_id,
+                    format!("failed to read pinned prompt: {err}"),
+                )
+                .await;
+            }
+        }
+    }
+
+    async fn thread_set_pinned_prompt(
+        &mut self,
+        request_id: RequestId,
+        params: ThreadSetPinnedPromptParams,
+    ) {
+        let ThreadSetPinnedPromptParams {
+            thread_id,
+            pinned_prompt,
+        } = params;
+        let result = codex_hub::set_pinned_prompt(
+            &self.config.codex_home,
+            thread_id.as_str(),
+            pinned_prompt.clone().unwrap_or_default(),
+        )
+        .await;
+        match result {
+            Ok(()) => {
+                self.outgoing
+                    .send_response(request_id, ThreadSetPinnedPromptResponse {})
+                    .await;
+                let notification = ThreadPinnedPromptUpdatedNotification {
+                    thread_id,
+                    pinned_prompt,
+                    updated_at: time::OffsetDateTime::now_utc().unix_timestamp(),
+                };
+                self.outgoing
+                    .send_server_notification(ServerNotification::ThreadPinnedPromptUpdated(
+                        notification,
+                    ))
+                    .await;
+            }
+            Err(err) => {
+                self.send_internal_error(
+                    request_id,
+                    format!("failed to update pinned prompt: {err}"),
+                )
+                .await;
+            }
+        }
+    }
+
+    async fn thread_export_markdown(
+        &mut self,
+        request_id: RequestId,
+        params: ThreadExportMarkdownParams,
+    ) {
+        let ThreadExportMarkdownParams {
+            thread_id,
+            output_path,
+            include_tool_io,
+            include_reasoning_summaries,
+            include_token_usage,
+            include_turn_context,
+            redact_secrets,
+            recent_review_messages,
+        } = params;
+
+        let thread_uuid = match ThreadId::from_string(&thread_id) {
+            Ok(id) => id,
+            Err(err) => {
+                self.send_invalid_request_error(request_id, format!("invalid thread id: {err}"))
+                    .await;
+                return;
+            }
+        };
+
+        let rollout_path =
+            match find_thread_path_by_id_str(&self.config.codex_home, &thread_uuid.to_string())
+                .await
+            {
+                Ok(Some(path)) => Some(path),
+                Ok(None) => self
+                    .thread_manager
+                    .get_thread(thread_uuid)
+                    .await
+                    .ok()
+                    .and_then(|thread| thread.rollout_path()),
+                Err(err) => {
+                    self.send_internal_error(
+                        request_id,
+                        format!("failed to locate rollout for thread {thread_uuid}: {err}"),
+                    )
+                    .await;
+                    return;
+                }
+            };
+
+        let Some(rollout_path) = rollout_path else {
+            self.send_invalid_request_error(
+                request_id,
+                format!("thread {thread_uuid} does not have a materialized rollout"),
+            )
+            .await;
+            return;
+        };
+
+        let mut options = ExportMarkdownOptions::default();
+        if let Some(include_tool_io) = include_tool_io {
+            options.include_tool_io = include_tool_io;
+        }
+        if let Some(include_reasoning_summaries) = include_reasoning_summaries {
+            options.include_reasoning_summaries = include_reasoning_summaries;
+        }
+        if let Some(include_token_usage) = include_token_usage {
+            options.include_token_usage = include_token_usage;
+        }
+        if let Some(include_turn_context) = include_turn_context {
+            options.include_turn_context = include_turn_context;
+        }
+        if let Some(redact_secrets) = redact_secrets {
+            options.redact_secrets = redact_secrets;
+        }
+        if let Some(recent_review_messages) = recent_review_messages {
+            options.recent_review_messages = recent_review_messages;
+        }
+
+        let markdown = match export_rollout_to_markdown(rollout_path.as_path(), &options).await {
+            Ok(markdown) => markdown,
+            Err(err) => {
+                self.send_internal_error(
+                    request_id,
+                    format!(
+                        "failed to export rollout `{}` as markdown: {err}",
+                        rollout_path.display()
+                    ),
+                )
+                .await;
+                return;
+            }
+        };
+
+        if let Some(path) = output_path.clone() {
+            if let Some(parent) = path.parent()
+                && let Err(err) = tokio::fs::create_dir_all(parent).await
+            {
+                self.send_internal_error(
+                    request_id,
+                    format!(
+                        "failed to create export directory `{}`: {err}",
+                        parent.display()
+                    ),
+                )
+                .await;
+                return;
+            }
+            if let Err(err) = tokio::fs::write(path.as_path(), markdown.as_bytes()).await {
+                self.send_internal_error(
+                    request_id,
+                    format!(
+                        "failed to write markdown export `{}`: {err}",
+                        path.display()
+                    ),
+                )
+                .await;
+                return;
+            }
+            let stream_notification = StreamUpdatedNotification {
+                thread_id: thread_uuid.to_string(),
+                stream_path: path.clone(),
+                updated_at: time::OffsetDateTime::now_utc().unix_timestamp(),
+            };
+            self.outgoing
+                .send_server_notification(ServerNotification::StreamUpdated(stream_notification))
+                .await;
+        }
+
+        self.outgoing
+            .send_response(
+                request_id,
+                ThreadExportMarkdownResponse {
+                    markdown,
+                    output_path,
+                },
+            )
+            .await;
+    }
+
+    async fn hub_status(&mut self, request_id: RequestId, _params: HubStatusParams) {
+        match codex_hub::status(&self.config.codex_home).await {
+            Ok(status) => {
+                self.outgoing
+                    .send_response(
+                        request_id,
+                        HubStatusResponse {
+                            running: status.running,
+                            endpoint: status.endpoint,
+                            pid: status.pid,
+                            started_at: status.started_at,
+                            lan_enabled: status.lan_enabled,
+                            device_count: status.device_count,
+                            reason: status.reason,
+                        },
+                    )
+                    .await;
+            }
+            Err(err) => {
+                self.send_internal_error(request_id, format!("failed to read hub status: {err}"))
+                    .await;
+            }
+        }
+    }
+
+    async fn hub_configure_lan(&mut self, request_id: RequestId, params: HubConfigureLanParams) {
+        let HubConfigureLanParams {
+            enabled,
+            bind_host,
+            bind_port,
+        } = params;
+        match codex_hub::configure_lan(&self.config.codex_home, enabled, bind_host, bind_port).await
+        {
+            Ok(config) => {
+                self.outgoing
+                    .send_response(
+                        request_id,
+                        HubConfigureLanResponse {
+                            enabled: config.enabled,
+                            bind_host: config.bind_host,
+                            bind_port: config.bind_port,
+                        },
+                    )
+                    .await;
+            }
+            Err(err) => {
+                self.send_internal_error(
+                    request_id,
+                    format!("failed to configure hub LAN mode: {err}"),
+                )
+                .await;
+            }
+        }
+    }
+
+    async fn pair_start(&mut self, request_id: RequestId, _params: PairStartParams) {
+        match codex_hub::start_pairing(&self.config.codex_home).await {
+            Ok(code) => {
+                self.outgoing
+                    .send_response(
+                        request_id,
+                        PairStartResponse {
+                            code: code.code.clone(),
+                            expires_at: code.expires_at,
+                        },
+                    )
+                    .await;
+                self.outgoing
+                    .send_server_notification(ServerNotification::DevicePairingRequested(
+                        DevicePairingRequestedNotification {
+                            code: code.code,
+                            expires_at: code.expires_at,
+                        },
+                    ))
+                    .await;
+            }
+            Err(err) => {
+                self.send_internal_error(request_id, format!("failed to start pairing: {err}"))
+                    .await;
+            }
+        }
+    }
+
+    async fn pair_complete(&mut self, request_id: RequestId, params: PairCompleteParams) {
+        let role = match params.role {
+            HubDeviceRole::Observer => HubRole::Observer,
+            HubDeviceRole::Operator => HubRole::Operator,
+            HubDeviceRole::PromptOnly => HubRole::PromptOnly,
+        };
+        match codex_hub::complete_pairing(
+            &self.config.codex_home,
+            params.code,
+            params.device_name,
+            role,
+        )
+        .await
+        {
+            Ok(result) => {
+                self.outgoing
+                    .send_response(
+                        request_id,
+                        PairCompleteResponse {
+                            device: map_hub_device_to_api(result.device),
+                            device_token: result.device_token,
+                        },
+                    )
+                    .await;
+            }
+            Err(err) => {
+                self.send_invalid_request_error(request_id, format!("pairing failed: {err}"))
+                    .await;
+            }
+        }
+    }
+
+    async fn device_list(&mut self, request_id: RequestId, params: DeviceListParams) {
+        match codex_hub::list_devices(&self.config.codex_home).await {
+            Ok(devices) => {
+                let mut data: Vec<codex_app_server_protocol::HubDevice> =
+                    devices.into_iter().map(map_hub_device_to_api).collect();
+                data.sort_by(|a, b| a.device_id.cmp(&b.device_id));
+
+                let total = data.len();
+                let start = match params.cursor {
+                    Some(cursor) => {
+                        match data.binary_search_by(|device| device.device_id.cmp(&cursor)) {
+                            Ok(idx) => idx + 1,
+                            Err(idx) => idx,
+                        }
+                    }
+                    None => 0,
+                };
+                let limit = params.limit.unwrap_or(total as u32).max(1) as usize;
+                let end = start.saturating_add(limit).min(total);
+                let page = data[start..end].to_vec();
+                let next_cursor = page
+                    .last()
+                    .filter(|_| end < total)
+                    .map(|d| d.device_id.clone());
+                self.outgoing
+                    .send_response(
+                        request_id,
+                        DeviceListResponse {
+                            data: page,
+                            next_cursor,
+                        },
+                    )
+                    .await;
+            }
+            Err(err) => {
+                self.send_internal_error(request_id, format!("failed to list devices: {err}"))
+                    .await;
+            }
+        }
+    }
+
+    async fn device_revoke(&mut self, request_id: RequestId, params: DeviceRevokeParams) {
+        match codex_hub::revoke_device(&self.config.codex_home, params.device_id.as_str()).await {
+            Ok(revoked) => {
+                self.outgoing
+                    .send_response(request_id, DeviceRevokeResponse { revoked })
+                    .await;
+            }
+            Err(err) => {
+                self.send_internal_error(request_id, format!("failed to revoke device: {err}"))
+                    .await;
+            }
+        }
+    }
+
+    async fn capture_screenshot(&mut self, request_id: RequestId, params: CaptureScreenshotParams) {
+        let ts = time::OffsetDateTime::now_utc().unix_timestamp();
+        let output_path = params.output_path.unwrap_or_else(|| {
+            self.config
+                .codex_home
+                .join("hub")
+                .join("captures")
+                .join(format!("screenshot-{ts}.png"))
+        });
+        if let Some(parent) = output_path.parent()
+            && let Err(err) = tokio::fs::create_dir_all(parent).await
+        {
+            self.send_internal_error(
+                request_id,
+                format!(
+                    "failed to create screenshot directory `{}`: {err}",
+                    parent.display()
+                ),
+            )
+            .await;
+            return;
+        }
+
+        #[cfg(windows)]
+        let command_result = {
+            let escaped_path = output_path.display().to_string().replace('\'', "''");
+            std::process::Command::new("powershell")
+                .arg("-NoProfile")
+                .arg("-ExecutionPolicy")
+                .arg("Bypass")
+                .arg("-Command")
+                .arg(format!(
+                    "Add-Type -AssemblyName System.Windows.Forms; \
+                     Add-Type -AssemblyName System.Drawing; \
+                     $bounds=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; \
+                     $bmp=New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height; \
+                     $gfx=[System.Drawing.Graphics]::FromImage($bmp); \
+                     $gfx.CopyFromScreen($bounds.Location,[System.Drawing.Point]::Empty,$bounds.Size); \
+                     $bmp.Save('{escaped_path}',[System.Drawing.Imaging.ImageFormat]::Png); \
+                     $gfx.Dispose(); \
+                     $bmp.Dispose();"
+                ))
+                .status()
+        };
+        #[cfg(not(windows))]
+        let command_result: std::io::Result<std::process::ExitStatus> = Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "capture/screenshot currently supports Windows only",
+        ));
+
+        match command_result {
+            Ok(status) if status.success() => {
+                self.outgoing
+                    .send_response(request_id, CaptureScreenshotResponse { path: output_path })
+                    .await;
+            }
+            Ok(status) => {
+                self.send_internal_error(
+                    request_id,
+                    format!("screenshot command exited with status: {status}"),
+                )
+                .await;
+            }
+            Err(err) => {
+                self.send_internal_error(
+                    request_id,
+                    format!("failed to run screenshot capture: {err}"),
+                )
+                .await;
+            }
+        }
+    }
+
+    async fn asset_upload_clipboard_image(
+        &mut self,
+        request_id: RequestId,
+        params: AssetUploadClipboardImageParams,
+    ) {
+        let AssetUploadClipboardImageParams {
+            image_base64,
+            file_name,
+        } = params;
+        let Some(image_base64) = image_base64 else {
+            self.send_invalid_request_error(
+                request_id,
+                "imageBase64 is required for asset/uploadClipboardImage".to_string(),
+            )
+            .await;
+            return;
+        };
+        let image_bytes =
+            match base64::engine::general_purpose::STANDARD.decode(image_base64.as_bytes()) {
+                Ok(bytes) => bytes,
+                Err(err) => {
+                    self.send_invalid_request_error(
+                        request_id,
+                        format!("imageBase64 is not valid base64: {err}"),
+                    )
+                    .await;
+                    return;
+                }
+            };
+
+        let ts = time::OffsetDateTime::now_utc().unix_timestamp();
+        let asset_id = format!("asset-{ts}");
+        let requested_name = file_name.unwrap_or_else(|| format!("{asset_id}.png"));
+        if requested_name.contains('/') || requested_name.contains('\\') {
+            self.send_invalid_request_error(
+                request_id,
+                "fileName must not include path separators".to_string(),
+            )
+            .await;
+            return;
+        }
+        let output_path = self
+            .config
+            .codex_home
+            .join("hub")
+            .join("assets")
+            .join(requested_name);
+        if let Some(parent) = output_path.parent()
+            && let Err(err) = tokio::fs::create_dir_all(parent).await
+        {
+            self.send_internal_error(
+                request_id,
+                format!(
+                    "failed to create asset directory `{}`: {err}",
+                    parent.display()
+                ),
+            )
+            .await;
+            return;
+        }
+        if let Err(err) = tokio::fs::write(output_path.as_path(), image_bytes).await {
+            self.send_internal_error(
+                request_id,
+                format!(
+                    "failed to write clipboard image `{}`: {err}",
+                    output_path.display()
+                ),
+            )
+            .await;
+            return;
+        }
+
+        self.outgoing
+            .send_response(
+                request_id,
+                AssetUploadClipboardImageResponse {
+                    asset_id,
+                    path: output_path,
+                },
+            )
+            .await;
+    }
+
+    async fn agent_interrupt(&mut self, request_id: RequestId, params: AgentInterruptParams) {
+        let AgentInterruptParams { thread_id, .. } = params;
+        let (thread_uuid, thread) = match self.load_thread(&thread_id).await {
+            Ok(v) => v,
+            Err(error) => {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+        };
+
+        if let Err(err) = thread.submit(Op::Interrupt).await {
+            self.send_internal_error(
+                request_id,
+                format!("failed to interrupt thread {thread_uuid}: {err}"),
+            )
+            .await;
+            return;
+        }
+
+        self.outgoing
+            .send_response(request_id, AgentInterruptResponse {})
+            .await;
+        self.outgoing
+            .send_server_notification(ServerNotification::AgentUpdated(AgentUpdatedNotification {
+                thread_id: thread_uuid.to_string(),
+                agent_id: "primary".to_string(),
+                status: "interruptRequested".to_string(),
+                message: None,
+            }))
+            .await;
     }
 
     pub(crate) fn thread_created_receiver(&self) -> broadcast::Receiver<ThreadId> {
@@ -5416,6 +6043,21 @@ impl CodexMessageProcessor {
             Ok(conv) => conv.rollout_path(),
             Err(_) => None,
         }
+    }
+}
+
+fn map_hub_device_to_api(device: codex_hub::HubDevice) -> codex_app_server_protocol::HubDevice {
+    let role = match device.role {
+        HubRole::Observer => HubDeviceRole::Observer,
+        HubRole::Operator => HubDeviceRole::Operator,
+        HubRole::PromptOnly => HubDeviceRole::PromptOnly,
+    };
+    codex_app_server_protocol::HubDevice {
+        device_id: device.device_id,
+        device_name: device.device_name,
+        role,
+        paired_at: device.paired_at,
+        last_seen_at: device.last_seen_at,
     }
 }
 

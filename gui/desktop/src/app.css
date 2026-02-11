@@ -1,0 +1,336 @@
+:root,
+[data-theme="default"] {
+  --bg-base: #101820;
+  --bg-highlight: #16304d;
+  --panel: #1a2632;
+  --panel-soft: #223547;
+  --border: #3b5368;
+  --text-primary: #eef4ff;
+  --text-muted: #a9bfd7;
+  --accent: #65b4ff;
+  --success: #5dcc89;
+  --warning: #f4c95d;
+  --danger: #f07777;
+}
+
+[data-theme="fallout"] {
+  --bg-base: #1d1b16;
+  --bg-highlight: #393123;
+  --panel: #2a261d;
+  --panel-soft: #373226;
+  --border: #5f4d2f;
+  --text-primary: #ffefc6;
+  --text-muted: #d2b980;
+  --accent: #ffb347;
+  --success: #b1d87a;
+  --warning: #e5c56a;
+  --danger: #f08f6f;
+}
+
+[data-theme="cyberpunk"] {
+  --bg-base: #120619;
+  --bg-highlight: #2a1140;
+  --panel: #220f2f;
+  --panel-soft: #301b42;
+  --border: #6f348d;
+  --text-primary: #fbe8ff;
+  --text-muted: #d9a7e7;
+  --accent: #32f6ff;
+  --success: #54f5b4;
+  --warning: #ffd166;
+  --danger: #ff6fa5;
+}
+
+[data-theme="matrix"] {
+  --bg-base: #030a03;
+  --bg-highlight: #0d1e0d;
+  --panel: #071207;
+  --panel-soft: #0c1a0c;
+  --border: #1f6426;
+  --text-primary: #a6ffad;
+  --text-muted: #6fd278;
+  --accent: #4dff57;
+  --success: #76ff8f;
+  --warning: #d5ff73;
+  --danger: #ff8f8f;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  gap: 12px;
+}
+
+.top-bar {
+  background: linear-gradient(130deg, var(--panel), var(--panel-soft));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.top-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.app-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  grid-template-rows: minmax(0, 1fr) 250px;
+  grid-template-areas:
+    "threads timeline status"
+    "composer board status";
+  gap: 12px;
+}
+
+.pane {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.pane h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.threads-pane {
+  grid-area: threads;
+}
+
+.timeline-pane {
+  grid-area: timeline;
+}
+
+.board-pane {
+  grid-area: board;
+}
+
+.composer-pane {
+  grid-area: composer;
+}
+
+.status-pane {
+  grid-area: status;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.thread-list,
+.timeline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.thread-button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--panel-soft);
+  color: inherit;
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.thread-button.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.thread-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.thread-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.thread-time,
+.thread-meta,
+.event-time,
+.status-label,
+.status-feedback,
+.indicator-meta {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.timeline-event {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: 8px;
+}
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.agent-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel-soft) 88%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-task {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.agent-status-badge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  border: 1px solid transparent;
+}
+
+.agent-status-idle {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+
+.agent-status-working {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.agent-status-offline {
+  color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--text-muted) 40%, transparent);
+}
+
+.agent-status-error {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+.field-label {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+textarea,
+input,
+select {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-soft) 80%, transparent);
+  color: inherit;
+  padding: 8px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: inherit;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.composer-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.indicator-row,
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-row {
+  justify-content: space-between;
+}
+
+.indicator-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--text-muted);
+}
+
+.indicator-dot.online {
+  background: var(--success);
+}
+
+.indicator-dot.offline {
+  background: var(--danger);
+}
+
+.indicator-dot.idle {
+  background: var(--warning);
+}
+
+.indicator-label {
+  font-size: 0.9rem;
+}
+
+.status-feedback {
+  margin: 0;
+  min-height: 20px;
+}
+
+@media (max-width: 1200px) {
+  .app-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "status"
+      "threads"
+      "timeline"
+      "board"
+      "composer";
+  }
+
+  .pane {
+    min-height: 220px;
+  }
+}

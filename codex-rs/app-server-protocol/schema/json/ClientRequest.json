@@ -20,6 +20,23 @@
       ],
       "type": "object"
     },
+    "AgentInterruptParams": {
+      "properties": {
+        "threadId": {
+          "type": "string"
+        },
+        "turnId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "threadId"
+      ],
+      "type": "object"
+    },
     "AppsListParams": {
       "description": "EXPERIMENTAL - list available apps/connectors.",
       "properties": {
@@ -110,6 +127,23 @@
         }
       ]
     },
+    "AssetUploadClipboardImageParams": {
+      "properties": {
+        "fileName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "imageBase64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
     "ByteRange": {
       "properties": {
         "end": {
@@ -149,6 +183,17 @@
       "required": [
         "loginId"
       ],
+      "type": "object"
+    },
+    "CaptureScreenshotParams": {
+      "properties": {
+        "outputPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
       "type": "object"
     },
     "ClientInfo": {
@@ -378,6 +423,36 @@
           "type": "object"
         }
       ]
+    },
+    "DeviceListParams": {
+      "properties": {
+        "cursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limit": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "DeviceRevokeParams": {
+      "properties": {
+        "deviceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "deviceId"
+      ],
+      "type": "object"
     },
     "DynamicToolSpec": {
       "properties": {
@@ -709,6 +784,42 @@
       "required": [
         "cwd"
       ],
+      "type": "object"
+    },
+    "HubConfigureLanParams": {
+      "properties": {
+        "bindHost": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bindPort": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "HubDeviceRole": {
+      "enum": [
+        "observer",
+        "operator",
+        "promptOnly"
+      ],
+      "type": "string"
+    },
+    "HubStatusParams": {
       "type": "object"
     },
     "InitializeCapabilities": {
@@ -1233,6 +1344,28 @@
           ]
         }
       },
+      "type": "object"
+    },
+    "PairCompleteParams": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "deviceName": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/HubDeviceRole"
+        }
+      },
+      "required": [
+        "code",
+        "deviceName",
+        "role"
+      ],
+      "type": "object"
+    },
+    "PairStartParams": {
       "type": "object"
     },
     "Personality": {
@@ -2342,6 +2475,61 @@
       ],
       "type": "object"
     },
+    "ThreadExportMarkdownParams": {
+      "properties": {
+        "includeReasoningSummaries": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "includeTokenUsage": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "includeToolIo": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "includeTurnContext": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "outputPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recentReviewMessages": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "redactSecrets": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "threadId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "threadId"
+      ],
+      "type": "object"
+    },
     "ThreadForkParams": {
       "description": "There are two ways to fork a thread: 1. By thread_id: load the thread from disk by thread_id and fork it into a new thread. 2. By path: load the thread from disk by path and fork it into a new thread.\n\nIf using path, the thread_id param will be ignored.\n\nPrefer using thread_id whenever possible.",
       "properties": {
@@ -2403,6 +2591,17 @@
             }
           ]
         },
+        "threadId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "threadId"
+      ],
+      "type": "object"
+    },
+    "ThreadGetPinnedPromptParams": {
+      "properties": {
         "threadId": {
           "type": "string"
         }
@@ -2620,6 +2819,23 @@
       },
       "required": [
         "name",
+        "threadId"
+      ],
+      "type": "object"
+    },
+    "ThreadSetPinnedPromptParams": {
+      "properties": {
+        "pinnedPrompt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threadId": {
+          "type": "string"
+        }
+      },
+      "required": [
         "threadId"
       ],
       "type": "object"
@@ -3418,6 +3634,294 @@
         "params"
       ],
       "title": "Thread/readRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "thread/getPinnedPrompt"
+          ],
+          "title": "Thread/getPinnedPromptRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ThreadGetPinnedPromptParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Thread/getPinnedPromptRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "thread/setPinnedPrompt"
+          ],
+          "title": "Thread/setPinnedPromptRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ThreadSetPinnedPromptParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Thread/setPinnedPromptRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "thread/exportMarkdown"
+          ],
+          "title": "Thread/exportMarkdownRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ThreadExportMarkdownParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Thread/exportMarkdownRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "hub/status"
+          ],
+          "title": "Hub/statusRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/HubStatusParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Hub/statusRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "hub/configureLan"
+          ],
+          "title": "Hub/configureLanRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/HubConfigureLanParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Hub/configureLanRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "pair/start"
+          ],
+          "title": "Pair/startRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/PairStartParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Pair/startRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "pair/complete"
+          ],
+          "title": "Pair/completeRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/PairCompleteParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Pair/completeRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "device/list"
+          ],
+          "title": "Device/listRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/DeviceListParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Device/listRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "device/revoke"
+          ],
+          "title": "Device/revokeRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/DeviceRevokeParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Device/revokeRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "capture/screenshot"
+          ],
+          "title": "Capture/screenshotRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/CaptureScreenshotParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Capture/screenshotRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "asset/uploadClipboardImage"
+          ],
+          "title": "Asset/uploadClipboardImageRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/AssetUploadClipboardImageParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Asset/uploadClipboardImageRequest",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "agent/interrupt"
+          ],
+          "title": "Agent/interruptRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/AgentInterruptParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Agent/interruptRequest",
       "type": "object"
     },
     {

@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "HubDeviceRole": {
+      "enum": [
+        "observer",
+        "operator",
+        "promptOnly"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "deviceName": {
+      "type": "string"
+    },
+    "role": {
+      "$ref": "#/definitions/HubDeviceRole"
+    }
+  },
+  "required": [
+    "code",
+    "deviceName",
+    "role"
+  ],
+  "title": "PairCompleteParams",
+  "type": "object"
+}

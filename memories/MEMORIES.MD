@@ -1,7 +1,8 @@
 ﻿# Memories
 
 - Native GUI planning file: `GUI_PLAN.md`.
-- User asked to conserve Claude quota; avoid heavy `claude -p` loops unless explicitly requested.
+- Planning and implementation must not depend on Claude usage.
+- Subagents and Codex CLI are approved optional accelerators for discovery/execution.
 - Best-fit stack chosen for this repo: Tauri v2 + React/TS + Rust orchestration over app-server v2 contracts.
 - External reference signal used:
   - `anomalyco/opencode` uses Tauri desktop + sidecar CLI + client/server orientation.
@@ -14,3 +15,7 @@
 - Security defaults in plan:
   - LAN companion mode off by default.
   - Explicit device pairing required before any mobile access.
+- Implemented foundation slice:
+  - Added workspace crate `codex-hub` with daemon state persistence under `CODEX_HOME/hub/state.json`.
+  - Added HTTP control endpoints: `/health`, `/pair/start`, `/admin/shutdown`.
+  - Added CLI commands: `codex hub start|stop|status|pair` plus internal `codex hub daemon`.

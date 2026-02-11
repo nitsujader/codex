@@ -1702,6 +1702,216 @@ pub struct ThreadReadResponse {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]
+pub struct ThreadGetPinnedPromptParams {
+    pub thread_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct ThreadGetPinnedPromptResponse {
+    pub pinned_prompt: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct ThreadSetPinnedPromptParams {
+    pub thread_id: String,
+    #[ts(optional = nullable)]
+    pub pinned_prompt: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct ThreadSetPinnedPromptResponse {}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct ThreadExportMarkdownParams {
+    pub thread_id: String,
+    #[ts(optional = nullable)]
+    pub output_path: Option<PathBuf>,
+    #[ts(optional = nullable)]
+    pub include_tool_io: Option<bool>,
+    #[ts(optional = nullable)]
+    pub include_reasoning_summaries: Option<bool>,
+    #[ts(optional = nullable)]
+    pub include_token_usage: Option<bool>,
+    #[ts(optional = nullable)]
+    pub include_turn_context: Option<bool>,
+    #[ts(optional = nullable)]
+    pub redact_secrets: Option<bool>,
+    #[ts(optional = nullable)]
+    pub recent_review_messages: Option<usize>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct ThreadExportMarkdownResponse {
+    pub markdown: String,
+    pub output_path: Option<PathBuf>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub enum HubDeviceRole {
+    Observer,
+    Operator,
+    PromptOnly,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct HubDevice {
+    pub device_id: String,
+    pub device_name: String,
+    pub role: HubDeviceRole,
+    pub paired_at: i64,
+    pub last_seen_at: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct HubStatusParams {}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct HubStatusResponse {
+    pub running: bool,
+    pub endpoint: Option<String>,
+    pub pid: Option<u32>,
+    pub started_at: Option<i64>,
+    pub lan_enabled: bool,
+    pub device_count: usize,
+    pub reason: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct HubConfigureLanParams {
+    pub enabled: bool,
+    #[ts(optional = nullable)]
+    pub bind_host: Option<String>,
+    #[ts(optional = nullable)]
+    pub bind_port: Option<u16>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct HubConfigureLanResponse {
+    pub enabled: bool,
+    pub bind_host: String,
+    pub bind_port: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct PairStartParams {}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct PairStartResponse {
+    pub code: String,
+    pub expires_at: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct PairCompleteParams {
+    pub code: String,
+    pub device_name: String,
+    pub role: HubDeviceRole,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct PairCompleteResponse {
+    pub device: HubDevice,
+    pub device_token: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct DeviceListParams {
+    #[ts(optional = nullable)]
+    pub cursor: Option<String>,
+    #[ts(optional = nullable)]
+    pub limit: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct DeviceListResponse {
+    pub data: Vec<HubDevice>,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct DeviceRevokeParams {
+    pub device_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct DeviceRevokeResponse {
+    pub revoked: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct CaptureScreenshotParams {
+    #[ts(optional = nullable)]
+    pub output_path: Option<PathBuf>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct CaptureScreenshotResponse {
+    pub path: PathBuf,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct AssetUploadClipboardImageParams {
+    #[ts(optional = nullable)]
+    pub image_base64: Option<String>,
+    #[ts(optional = nullable)]
+    pub file_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct AssetUploadClipboardImageResponse {
+    pub asset_id: String,
+    pub path: PathBuf,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
 pub struct SkillsListParams {
     /// When empty, defaults to the current session working directory.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -2233,6 +2443,20 @@ pub struct TurnInterruptParams {
 #[ts(export_to = "v2/")]
 pub struct TurnInterruptResponse {}
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct AgentInterruptParams {
+    pub thread_id: String,
+    #[ts(optional = nullable)]
+    pub turn_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct AgentInterruptResponse {}
+
 // User input types
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
@@ -2706,6 +2930,42 @@ pub struct ThreadNameUpdatedNotification {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub thread_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct ThreadPinnedPromptUpdatedNotification {
+    pub thread_id: String,
+    pub pinned_prompt: Option<String>,
+    pub updated_at: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct AgentUpdatedNotification {
+    pub thread_id: String,
+    pub agent_id: String,
+    pub status: String,
+    pub message: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct StreamUpdatedNotification {
+    pub thread_id: String,
+    pub stream_path: PathBuf,
+    pub updated_at: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct DevicePairingRequestedNotification {
+    pub code: String,
+    pub expires_at: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "deviceCount": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "endpoint": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "lanEnabled": {
+      "type": "boolean"
+    },
+    "pid": {
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "running": {
+      "type": "boolean"
+    },
+    "startedAt": {
+      "format": "int64",
+      "type": [
+        "integer",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "deviceCount",
+    "lanEnabled",
+    "running"
+  ],
+  "title": "HubStatusResponse",
+  "type": "object"
+}
